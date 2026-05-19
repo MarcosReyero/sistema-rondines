@@ -2,4 +2,4 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "gunicorn config.wsgi --bind 0.0.0.0:8000"
+startCommand = "cd backend && daphne -b 0.0.0.0 -p 8000 config.asgi:application"

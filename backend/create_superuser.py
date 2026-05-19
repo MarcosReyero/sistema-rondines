@@ -5,6 +5,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
 from django.contrib.auth import get_user_model
+from rondines.models import Perfil
 
 User = get_user_model()
 
@@ -14,7 +15,10 @@ email = os.environ.get('DJANGO_SUPERUSER_EMAIL', '')
 
 if username and password:
     if not User.objects.filter(username=username).exists():
-        User.objects.create_superuser(username=username, password=password, email=email)
-        print(f'Superusuario {username} creado.')
+        user = User.objects.create_superuser(username=username, password=password, email=email)
+        Perfil.objects.get_or_create(user=user, defaults={'rol': 'supervisor'})
+        print(f'Superusuario {username} creado con rol supervisor.')
     else:
-        print(f'Superusuario {username} ya existe, omitiendo.')
+        user = User.objects.get(username=username)
+        Perfil.objects.get_or_create(user=user, defaults={'rol': 'supervisor'})
+        print(f'Superusuario {username} ya existe — perfil verificado.')
