@@ -9,5 +9,4 @@ COPY backend/ .
 
 EXPOSE 8000
 
-WORKDIR /app
-CMD ["gunicorn", "config.wsgi", "--bind", "0.0.0.0:8000", "--log-file", "-"]
+CMD ["sh", "-c", "python manage.py migrate && gunicorn config.wsgi --bind 0.0.0.0:8000"]
