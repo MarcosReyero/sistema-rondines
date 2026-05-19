@@ -41,7 +41,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates'],
+        'DIRS': [BASE_DIR / 'templates', BASE_DIR / 'frontend_dist'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -126,3 +126,9 @@ SIMPLE_JWT = {
 
 # Tiempo máximo en horas antes de marcar una ejecución como incompleta
 RONDA_MAX_HOURS = int(os.environ.get('RONDA_MAX_HOURS', '12'))
+
+# URL del frontend para generación de QR
+FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://tu-dominio.railway.app')
+
+# Servir frontend en producción (whitenoise)
+STATICFILES_DIRS = [BASE_DIR / 'frontend_dist'] if (BASE_DIR / 'frontend_dist').exists() else []
