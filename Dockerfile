@@ -2,12 +2,11 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
+#cache de Docker
 COPY backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend/ ./
-
-RUN ls -la
 
 ENV SECRET_KEY=clave-temporal-solo-para-build
 ENV DJANGO_SETTINGS_MODULE=config.settings
