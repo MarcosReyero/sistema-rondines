@@ -1,11 +1,12 @@
 from django.urls import path
+from django.views.decorators.csrf import csrf_exempt
 from rest_framework_simplejwt.views import TokenRefreshView
 from . import views
 
 urlpatterns = [
-    # Auth
-    path('auth/login/', views.CustomTokenObtainPairView.as_view(), name='token_obtain'),
-    path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    # Auth — csrf_exempt porque usan JWT, no sesiones
+    path('auth/login/', csrf_exempt(views.CustomTokenObtainPairView.as_view()), name='token_obtain'),
+    path('auth/refresh/', csrf_exempt(TokenRefreshView.as_view()), name='token_refresh'),
     path('auth/me/', views.me, name='me'),
 
     # Instalaciones

@@ -285,3 +285,67 @@ git push origin main
 - Whitenoise debe estar en **segundo lugar** en el `MIDDLEWARE`, inmediatamente después de `SecurityMiddleware`.
 - El `Dockerfile` debe estar en la **raíz del repo**, no dentro de `backend/`.
 - El `manage.py` debe estar dentro de `backend/`.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Resumen de lo construido
+Backend (backend/)
+Archivo	Contenido
+requirements.txt	+ simplejwt, channels, daphne, qrcode, Pillow, openpyxl
+config/settings.py	JWT, Channels+Redis, CORS, media, timezone AR
+config/asgi.py	ProtocolTypeRouter HTTP + WebSocket
+config/urls.py	/api/ + catch-all para frontend
+rondines/models.py	7 modelos: Perfil, Instalacion, Checkpoint, Ronda, RondaCheckpointOrden, EjecucionRonda, CheckpointScan
+rondines/serializers.py	Serializers completos con progreso y permisos
+rondines/views.py	25+ endpoints: CRUD, QR, scan, sync offline, dashboard, exportar Excel
+rondines/consumers.py	WebSocket con reconexión automática y ping/pong
+Frontend (frontend/src/)
+Archivo	Contenido
+views/vigilante/Login.jsx	Login mobile-first, dark theme
+views/vigilante/MisRondas.jsx	Lista de rondas, indicador online/offline
+views/vigilante/ScanCheckpoint.jsx	3 botones (observación/incidencia/alarma), guarda offline si no hay red
+views/supervisor/Dashboard.jsx	Métricas en tiempo real vía WebSocket
+views/supervisor/MapaInstalacion.jsx	Mapa con checkpoints drag&drop sobre imagen
+components/MapaCheckpoints.jsx	Mapa interactivo con líneas de recorrido
+sw.js	Service Worker workbox + Background Sync
+lib/db.js	IndexedDB para scans offline
+Pasos para correr
+1 — Variables de entorno en Railway
+
+SECRET_KEY=...
+PGDATABASE / PGUSER / PGPASSWORD / PGHOST / PGPORT  (ya configuradas)
+REDIS_URL=redis://...   ← agregar servicio Redis en Railway
+FRONTEND_URL=https://tu-app.railway.app
+DJANGO_SUPERUSER_USERNAME=admin
+DJANGO_SUPERUSER_PASSWORD=tupassword
+ALLOWED_HOSTS=tu-app.railway.app
+CSRF_TRUSTED_ORIGINS=https://tu-app.railway.app
+2 — Desarrollo local
+
+# Backend
+cd backend
+pip install -r requirements.txt
+python manage.py migrate
+python manage.py runserver
+
+# Frontend (otra terminal)
+cd frontend
+npm install
+npm run dev
+3 — Primer login
+El superusuario creado con las env vars tiene rol supervisor automáticamente. Los vigilantes se crean desde /supervisor/vigilantes.
