@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-dark-300 text-white font-sans;
+  }
+  * {
+    @apply box-border;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-accent hover:bg-accent-hover text-dark-500 font-semibold py-3 px-6 rounded-xl transition-all duration-200 active:scale-95;
+  }
+  .btn-danger {
+    @apply bg-danger hover:bg-danger-hover text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 active:scale-95;
+  }
+  .btn-warning {
+    @apply bg-warning hover:bg-warning-hover text-dark-500 font-semibold py-3 px-6 rounded-xl transition-all duration-200 active:scale-95;
+  }
+  .btn-ghost {
+    @apply border border-white/20 hover:bg-white/10 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 active:scale-95;
+  }
+  .card {
+    @apply bg-dark-200 rounded-2xl p-4 border border-white/5;
+  }
+  .input-field {
+    @apply w-full bg-dark-100 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-white/30 focus:outline-none focus:border-accent transition-colors;
+  }
+  .badge-observacion {
+    @apply bg-accent/20 text-accent text-xs px-2 py-0.5 rounded-full;
+  }
+  .badge-incidencia {
+    @apply bg-warning/20 text-warning text-xs px-2 py-0.5 rounded-full;
+  }
+  .badge-alarma {
+    @apply bg-danger/20 text-danger text-xs px-2 py-0.5 rounded-full;
+  }
+  .badge-completada {
+    @apply bg-accent/20 text-accent text-xs px-2 py-0.5 rounded-full;
+  }
+  .badge-en_curso {
+    @apply bg-blue-500/20 text-blue-400 text-xs px-2 py-0.5 rounded-full;
+  }
+  .badge-incompleta {
+    @apply bg-warning/20 text-warning text-xs px-2 py-0.5 rounded-full;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
