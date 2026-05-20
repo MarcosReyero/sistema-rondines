@@ -46,6 +46,9 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
-    sourcemap: false
-  }
+    sourcemap: false,
+    // Django sirve estáticos desde /static/, Vite tiene que generar rutas con ese prefijo
+    assetsDir: 'assets',
+  },
+  base: process.env.NODE_ENV === 'production' ? '/static/' : '/'
 })

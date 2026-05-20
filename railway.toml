@@ -1,5 +1,5 @@
 [build]
-builder = "nixpacks"
+builder = "dockerfile"
 
 [deploy]
-startCommand = "cd backend && daphne -b 0.0.0.0 -p 8000 config.asgi:application"
+startCommand = "cd backend && python manage.py migrate --noinput && python create_superuser.py && daphne -b 0.0.0.0 -p $PORT config.asgi:application"
