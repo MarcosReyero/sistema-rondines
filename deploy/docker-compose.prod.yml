@@ -24,6 +24,8 @@ services:
     build:
       context: ..
       dockerfile: deploy/Dockerfile.frontend
+    volumes:
+      - rondines_media:/usr/share/nginx/html/media:ro
     networks:
       - rondines-net
     restart: unless-stopped
