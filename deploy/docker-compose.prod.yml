@@ -1,0 +1,109 @@
+name: rondines
+
+services:
+
+  # ── HTTPS reverse proxy (Let's Encrypt o certificado local) ──────────────────
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - rondines_caddy_data:/data
+      - rondines_caddy_config:/config
+    networks:
+      - rondines-net
+    restart: unless-stopped
+    depends_on:
+      - frontend
+
+  # ── Frontend React + Nginx ───────────────────────────────────────────────────
+  frontend:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.frontend
+    networks:
+      - rondines-net
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+
+  # ── Backend Django / Daphne (ASGI + WebSockets) ──────────────────────────────
+  web:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             python create_superuser.py &&
+             daphne -b 0.0.0.0 -p 8000 config.asgi:application"
+    environment:
+      PGDATABASE: ${DB_NAME:-rondines}
+      PGUSER:     ${DB_USER:-rondines}
+      PGPASSWORD: ${DB_PASSWORD:-changeme}
+      PGHOST:     db
+      PGPORT:     5432
+      SECRET_KEY:               ${SECRET_KEY:?Falta SECRET_KEY en .env}
+      DEBUG:                    "False"
+      ALLOWED_HOSTS:            ${ALLOWED_HOSTS:-localhost,127.0.0.1}
+      CSRF_TRUSTED_ORIGINS:     ${CSRF_TRUSTED_ORIGINS:-https://localhost}
+      CORS_ALLOWED_ORIGINS:     ${CORS_ALLOWED_ORIGINS:-https://localhost}
+      DJANGO_SUPERUSER_USERNAME: ${DJANGO_SUPERUSER_USERNAME:-admin}
+      DJANGO_SUPERUSER_PASSWORD: ${DJANGO_SUPERUSER_PASSWORD:?Falta DJANGO_SUPERUSER_PASSWORD en .env}
+      DJANGO_SUPERUSER_EMAIL:    ${DJANGO_SUPERUSER_EMAIL:-admin@rondines.local}
+      FRONTEND_URL:             ${PUBLIC_URL:-https://localhost}
+      RONDA_MAX_HOURS:          ${RONDA_MAX_HOURS:-12}
+    volumes:
+      - rondines_media:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - rondines-net
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f daphne || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ── Base de datos PostgreSQL ─────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB:       ${DB_NAME:-rondines}
+      POSTGRES_USER:     ${DB_USER:-rondines}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    volumes:
+      - rondines_postgres_data:/var/lib/postgresql/data
+    networks:
+      - rondines-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-rondines} -d ${DB_NAME:-rondines}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "2"
+
+networks:
+  rondines-net:
+    driver: bridge
+
+volumes:
+  rondines_postgres_data:
+  rondines_media:
+  rondines_caddy_data:
+  rondines_caddy_config:

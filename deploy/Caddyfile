@@ -1,0 +1,17 @@
+# Caddyfile — Producción con dominio público (Let's Encrypt automático)
+# Usar cuando el servidor tiene IP pública y un dominio real apuntando a él.
+# Caddy obtiene y renueva el certificado SSL automáticamente.
+
+{
+  email {$ACME_EMAIL}
+}
+
+{$PUBLIC_DOMAIN} {
+  encode gzip
+
+  request_body {
+    max_size 20MB
+  }
+
+  reverse_proxy frontend:80
+}

@@ -1,0 +1,21 @@
+# Caddyfile.lan — Red local (LAN) con certificado mkcert
+# Usar cuando el servidor está en LAN (sin dominio público).
+# Requiere haber generado los certs con gen-cert.sh y montarlos en ./certs/
+
+{
+  # No usar ACME (Let's Encrypt) — usamos certificado local
+  auto_https off
+}
+
+{$PUBLIC_DOMAIN} {
+  encode gzip
+
+  request_body {
+    max_size 20MB
+  }
+
+  # Certificado generado con mkcert (ver deploy/gen-cert.sh)
+  tls /etc/caddy/certs/cert.pem /etc/caddy/certs/key.pem
+
+  reverse_proxy frontend:80
+}

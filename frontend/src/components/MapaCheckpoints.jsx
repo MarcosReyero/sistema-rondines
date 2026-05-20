@@ -8,10 +8,14 @@ export default function MapaCheckpoints({
   onMapClick,
   onMove,
   onDelete,
+  adjustMode = false,
+  imgPos = { x: 50, y: 50 },
+  onImgPosChange,
 }) {
   const containerRef = useRef(null)
   const [dragging, setDragging] = useState(null)
   const [scansMap, setScansMap] = useState({})
+  const [adjDrag, setAdjDrag] = useState(null)
 
   useEffect(() => {
     if (ejecucionActiva?.scans) {
@@ -22,7 +26,7 @@ export default function MapaCheckpoints({
   }, [ejecucionActiva])
 
   const handleContainerClick = (e) => {
-    if (!onMapClick || dragging) return
+    if (!onMapClick || dragging || adjustMode || adjDrag) return
     const rect = containerRef.current.getBoundingClientRect()
     const x = ((e.clientX - rect.left) / rect.width) * 100
     const y = ((e.clientY - rect.top) / rect.height) * 100
@@ -30,6 +34,7 @@ export default function MapaCheckpoints({
   }
 
   const handleDragStart = (e, cp) => {
+    if (adjustMode) return
     e.stopPropagation()
     setDragging(cp.id)
   }
@@ -43,7 +48,34 @@ export default function MapaCheckpoints({
     onMove?.(cp.id, parseFloat(x.toFixed(2)), parseFloat(y.toFixed(2)))
   }
 
-  const handleDragEnd = () => setDragging(null)
+  const handleDragEnd = () => {
+    setDragging(null)
+    setAdjDrag(null)
+  }
+
+  const handleImgMouseDown = (e) => {
+    if (!adjustMode) return
+    e.preventDefault()
+    e.stopPropagation()
+    setAdjDrag({ mouseX: e.clientX, mouseY: e.clientY, posX: imgPos.x, posY: imgPos.y })
+  }
+
+  const handleMouseMove = (e) => {
+    if (adjustMode && adjDrag) {
+      const rect = containerRef.current.getBoundingClientRect()
+      const dx = ((e.clientX - adjDrag.mouseX) / rect.width) * 100
+      const dy = ((e.clientY - adjDrag.mouseY) / rect.height) * 100
+      onImgPosChange?.({
+        x: Math.min(100, Math.max(0, adjDrag.posX - dx * 0.7)),
+        y: Math.min(100, Math.max(0, adjDrag.posY - dy * 0.7)),
+      })
+      return
+    }
+    if (dragging) {
+      const cp = checkpoints.find((c) => c.id === dragging)
+      if (cp) handleDrag(e, cp)
+    }
+  }
 
   const lineas = ejecucionActiva?.scans
     ? [...ejecucionActiva.scans]
@@ -53,18 +85,22 @@ export default function MapaCheckpoints({
     : []
 
   return (
-    <div className="relative w-full h-full min-h-64 rounded-2xl overflow-hidden bg-dark-100 border border-white/5 select-none"
+    <div
+      className={`relative w-full h-full min-h-64 rounded-2xl overflow-hidden bg-dark-100 border border-white/5 select-none ${adjustMode ? 'cursor-grab' : ''}`}
       ref={containerRef}
       onClick={handleContainerClick}
-      onMouseMove={(e) => { if (dragging) { const cp = checkpoints.find((c) => c.id === dragging); if (cp) handleDrag(e, cp) } }}
+      onMouseMove={handleMouseMove}
       onMouseUp={handleDragEnd}
+      onMouseLeave={handleDragEnd}
     >
       {imagenUrl ? (
         <img
           src={imagenUrl}
           alt="Mapa"
-          className="absolute inset-0 w-full h-full object-cover"
+          style={adjustMode ? { objectPosition: `${imgPos.x}% ${imgPos.y}%` } : {}}
+          className={`absolute inset-0 w-full h-full ${adjustMode ? 'object-cover' : 'object-fill'}`}
           draggable={false}
+          onMouseDown={handleImgMouseDown}
         />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center text-white/20">
@@ -77,10 +113,15 @@ export default function MapaCheckpoints({
       )}
 
       {/* Overlay semi transparente para legibilidad */}
-      {imagenUrl && <div className="absolute inset-0 bg-dark-500/30" />}
+      {imagenUrl && !adjustMode && <div className="absolute inset-0 bg-dark-500/30" />}
+
+      {/* Overlay modo ajuste */}
+      {adjustMode && (
+        <div className="absolute inset-0 bg-dark-500/10 border-2 border-accent/60 pointer-events-none" />
+      )}
 
       {/* Líneas de recorrido de la ejecución activa */}
-      {lineas.length > 1 && (
+      {!adjustMode && lineas.length > 1 && (
         <svg className="absolute inset-0 w-full h-full pointer-events-none">
           {lineas.map((cp, i) => {
             if (i === 0) return null
@@ -100,8 +141,8 @@ export default function MapaCheckpoints({
         </svg>
       )}
 
-      {/* Marcadores */}
-      {checkpoints.map((cp, idx) => (
+      {/* Marcadores (ocultos en modo ajuste) */}
+      {!adjustMode && checkpoints.map((cp, idx) => (
         <CheckpointMarker
           key={cp.id}
           checkpoint={cp}
@@ -113,7 +154,13 @@ export default function MapaCheckpoints({
         />
       ))}
 
-      {onMapClick && (
+      {adjustMode && (
+        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-dark-500/90 text-accent text-xs px-3 py-1.5 rounded-full pointer-events-none whitespace-nowrap">
+          Arrastrá para ajustar la posición de la imagen
+        </div>
+      )}
+
+      {!adjustMode && onMapClick && (
         <div className="absolute bottom-3 left-3 bg-dark-500/80 text-white/50 text-xs px-3 py-1.5 rounded-full pointer-events-none">
           Click para agregar checkpoint
         </div>

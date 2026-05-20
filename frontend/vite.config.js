@@ -50,5 +50,6 @@ export default defineConfig({
     // Django sirve estáticos desde /static/, Vite tiene que generar rutas con ese prefijo
     assetsDir: 'assets',
   },
-  base: process.env.NODE_ENV === 'production' ? '/static/' : '/'
+  // Docker nginx: VITE_BASE_PATH=/ | Railway Django/whitenoise: sin variable → /static/
+  base: process.env.VITE_BASE_PATH ?? (process.env.NODE_ENV === 'production' ? '/static/' : '/')
 })
