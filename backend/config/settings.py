@@ -149,3 +149,7 @@ FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://tu-dominio.railway.app')
 
 # Servir frontend en producción (whitenoise)
 STATICFILES_DIRS = [BASE_DIR / 'frontend_dist'] if (BASE_DIR / 'frontend_dist').exists() else []
+
+# Serve root-level PWA files (sw.js, manifest.webmanifest) from / instead of /static/
+_frontend_dist = BASE_DIR / 'frontend_dist'
+WHITENOISE_ROOT = str(_frontend_dist) if _frontend_dist.exists() else None
