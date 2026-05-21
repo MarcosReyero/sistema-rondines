@@ -1,10 +1,11 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
 
 export function useWebSocket(onMessage) {
   const wsRef = useRef(null)
   const reconnectTimer = useRef(null)
   const onMessageRef = useRef(onMessage)
   onMessageRef.current = onMessage
+  const [connected, setConnected] = useState(false)
 
   const connect = useCallback(() => {
     const token = localStorage.getItem('access_token')
@@ -17,6 +18,7 @@ export function useWebSocket(onMessage) {
 
     ws.onopen = () => {
       clearTimeout(reconnectTimer.current)
+      setConnected(true)
     }
 
     ws.onmessage = (e) => {
@@ -29,6 +31,7 @@ export function useWebSocket(onMessage) {
     }
 
     ws.onclose = () => {
+      setConnected(false)
       reconnectTimer.current = setTimeout(connect, 3000)
     }
 
@@ -51,4 +54,6 @@ export function useWebSocket(onMessage) {
       wsRef.current?.close()
     }
   }, [connect])
+
+  return connected
 }

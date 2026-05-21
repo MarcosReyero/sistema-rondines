@@ -11,6 +11,8 @@ export default function MapaCheckpoints({
   adjustMode = false,
   imgPos = { x: 50, y: 50 },
   onImgPosChange,
+  lastScanCpId = null,     // ID del checkpoint recién escaneado (para animación)
+  readOnly = false,         // true → no drag/click en modo monitoreo
 }) {
   const containerRef = useRef(null)
   const [dragging, setDragging] = useState(null)
@@ -22,11 +24,13 @@ export default function MapaCheckpoints({
       const map = {}
       ejecucionActiva.scans.forEach((s) => { map[s.checkpoint] = s })
       setScansMap(map)
+    } else {
+      setScansMap({})
     }
   }, [ejecucionActiva])
 
   const handleContainerClick = (e) => {
-    if (!onMapClick || dragging || adjustMode || adjDrag) return
+    if (!onMapClick || dragging || adjustMode || adjDrag || readOnly) return
     const rect = containerRef.current.getBoundingClientRect()
     const x = ((e.clientX - rect.left) / rect.width) * 100
     const y = ((e.clientY - rect.top) / rect.height) * 100
@@ -34,7 +38,7 @@ export default function MapaCheckpoints({
   }
 
   const handleDragStart = (e, cp) => {
-    if (adjustMode) return
+    if (adjustMode || readOnly) return
     e.stopPropagation()
     setDragging(cp.id)
   }
@@ -77,22 +81,25 @@ export default function MapaCheckpoints({
     }
   }
 
+  // Build ordered path from scans
   const lineas = ejecucionActiva?.scans
     ? [...ejecucionActiva.scans]
         .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
-        .map((s) => checkpoints.find((cp) => cp.id === s.checkpoint))
-        .filter(Boolean)
+        .map((s) => ({ ...checkpoints.find((cp) => cp.id === s.checkpoint), scanId: s.id }))
+        .filter((cp) => cp?.pos_x != null)
     : []
 
   return (
     <div
-      className={`relative w-full h-full min-h-64 rounded-2xl overflow-hidden bg-dark-100 border border-white/5 select-none ${adjustMode ? 'cursor-grab' : ''}`}
+      className={`relative w-full h-full min-h-64 rounded-2xl overflow-hidden bg-dark-100 border border-white/5 select-none
+        ${adjustMode ? 'cursor-grab' : readOnly ? 'cursor-default' : ''}`}
       ref={containerRef}
       onClick={handleContainerClick}
       onMouseMove={handleMouseMove}
       onMouseUp={handleDragEnd}
       onMouseLeave={handleDragEnd}
     >
+      {/* Map image */}
       {imagenUrl ? (
         <img
           src={imagenUrl}
@@ -107,60 +114,73 @@ export default function MapaCheckpoints({
           <div className="text-center">
             <p className="text-5xl mb-2">🗺</p>
             <p className="text-sm">Sin imagen satelital</p>
-            <p className="text-xs mt-1">Cargá una imagen en la instalación</p>
+            {!readOnly && <p className="text-xs mt-1">Cargá una imagen en la instalación</p>}
           </div>
         </div>
       )}
 
-      {/* Overlay semi transparente para legibilidad */}
-      {imagenUrl && !adjustMode && <div className="absolute inset-0 bg-dark-500/30" />}
+      {/* Dark overlay for legibility */}
+      {imagenUrl && !adjustMode && (
+        <div className="absolute inset-0 bg-dark-500/35" />
+      )}
 
-      {/* Overlay modo ajuste */}
+      {/* Adjust mode overlay */}
       {adjustMode && (
         <div className="absolute inset-0 bg-dark-500/10 border-2 border-accent/60 pointer-events-none" />
       )}
 
-      {/* Líneas de recorrido de la ejecución activa */}
+      {/* Route lines SVG */}
       {!adjustMode && lineas.length > 1 && (
         <svg className="absolute inset-0 w-full h-full pointer-events-none">
+          <defs>
+            <filter id="glow">
+              <feGaussianBlur stdDeviation="2" result="blur" />
+              <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+            </filter>
+          </defs>
           {lineas.map((cp, i) => {
             if (i === 0) return null
             const prev = lineas[i - 1]
+            const isLatest = i === lineas.length - 1
             return (
               <line
-                key={`line-${i}`}
+                key={`line-${cp.scanId ?? i}`}
                 x1={`${prev.pos_x}%`} y1={`${prev.pos_y}%`}
-                x2={`${cp.pos_x}%`} y2={`${cp.pos_y}%`}
+                x2={`${cp.pos_x}%`}  y2={`${cp.pos_y}%`}
                 stroke="#00d4aa"
-                strokeWidth="2"
-                strokeDasharray="6 3"
-                opacity="0.6"
+                strokeWidth={isLatest ? '2.5' : '1.5'}
+                strokeDasharray={isLatest ? '8 4' : '5 4'}
+                opacity={isLatest ? '0.9' : '0.45'}
+                filter={isLatest ? 'url(#glow)' : undefined}
               />
             )
           })}
         </svg>
       )}
 
-      {/* Marcadores (ocultos en modo ajuste) */}
+      {/* Checkpoint markers */}
       {!adjustMode && checkpoints.map((cp, idx) => (
         <CheckpointMarker
           key={cp.id}
           checkpoint={cp}
           numero={idx + 1}
           scan={scansMap[cp.id]}
-          onDragStart={(e) => handleDragStart(e, cp)}
-          onDelete={() => onDelete?.(cp.id)}
+          isNew={lastScanCpId === cp.id}
+          onDragStart={readOnly ? undefined : (e) => handleDragStart(e, cp)}
+          onDelete={readOnly ? undefined : () => onDelete?.(cp.id)}
           isDragging={dragging === cp.id}
         />
       ))}
 
+      {/* Adjust mode hint */}
       {adjustMode && (
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-dark-500/90 text-accent text-xs px-3 py-1.5 rounded-full pointer-events-none whitespace-nowrap">
           Arrastrá para ajustar la posición de la imagen
         </div>
       )}
 
-      {!adjustMode && onMapClick && (
+      {/* Edit mode hint */}
+      {!adjustMode && !readOnly && onMapClick && (
         <div className="absolute bottom-3 left-3 bg-dark-500/80 text-white/50 text-xs px-3 py-1.5 rounded-full pointer-events-none">
           Click para agregar checkpoint
         </div>
