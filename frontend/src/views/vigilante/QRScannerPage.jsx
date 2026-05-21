@@ -28,7 +28,6 @@ export default function QRScannerPage() {
   const notaRef = useRef(null)
 
   const detenerCamara = () => {
-    // Stop video tracks directly — does not wait for html5-qrcode's stop() promise
     try {
       document.querySelectorAll(`#${READER_ID} video`).forEach(v => {
         if (v.srcObject) { v.srcObject.getTracks().forEach(t => t.stop()); v.srcObject = null }
@@ -43,12 +42,14 @@ export default function QRScannerPage() {
 
     qr.start(
       { facingMode: 'environment' },
-      { fps: 12, qrbox: { width: 260, height: 260 } },
+      {
+        fps: 12,
+        // responsive qrbox: up to 260px but never more than 75% of the smaller dimension
+        qrbox: (w, h) => { const s = Math.min(w, h, 260); return { width: s, height: s } },
+      },
       async (text) => {
         if (detectadoRef.current) return
         detectadoRef.current = true
-
-        // Stop camera synchronously before any async work
         detenerCamara()
 
         const match = text.match(/\/check\/([a-f0-9-]{36})/i)
@@ -133,76 +134,96 @@ export default function QRScannerPage() {
   const enCamara = fase === 'iniciando' || fase === 'escaneando'
 
   return (
-    <div className="relative">
-      {/* ── Camera reader: always in DOM so html5-qrcode never loses its element ── */}
+    <>
+      {/* Supress html5-qrcode's built-in QR box overlay */}
+      <style>{`
+        #${READER_ID} { background: #000; }
+        #${READER_ID} video { object-fit: cover !important; width: 100% !important; height: 100% !important; }
+        #${READER_ID}__scan_region { width: 100% !important; height: 100% !important; }
+        #qr-shaded-region { display: none !important; }
+      `}</style>
+
+      {/* ── Camera overlay — always in DOM so html5-qrcode keeps its element ── */}
+      {/* display:none hides it without unmounting, preserving video state     */}
       <div
-        id={READER_ID}
-        className={enCamara ? 'fixed inset-0' : ''}
-        style={enCamara ? { zIndex: 40 } : { position: 'fixed', width: 0, height: 0, overflow: 'hidden', opacity: 0, pointerEvents: 'none' }}
-      />
-
-      {/* ── Camera overlay (header + viewfinder + footer) ── */}
-      {enCamara && (
-        <div className="fixed inset-0 flex flex-col pointer-events-none" style={{ zIndex: 50 }}>
-          <div
-            className="shrink-0 px-4 py-4 flex items-center justify-between pointer-events-auto"
-            style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.9) 0%, transparent 100%)' }}
+        className="fixed inset-0 flex flex-col bg-black"
+        style={{ zIndex: 50, display: enCamara ? 'flex' : 'none' }}
+      >
+        {/* Header */}
+        <div
+          className="shrink-0 px-4 py-4 flex items-center justify-between"
+          style={{ background: 'linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, transparent 100%)' }}
+        >
+          <div>
+            <h2 className="font-bold text-white text-lg">Escanear checkpoint</h2>
+            <p className="text-white/40 text-sm mt-0.5">
+              {fase === 'iniciando' ? 'Iniciando cámara...' : 'Posicioná el QR dentro del cuadrado'}
+            </p>
+          </div>
+          <button
+            onClick={() => navigate(-1)}
+            className="w-11 h-11 flex items-center justify-center rounded-full bg-white/10 text-white text-lg active:scale-90 transition-transform"
           >
-            <div>
-              <h2 className="font-bold text-white text-lg">Escanear checkpoint</h2>
-              <p className="text-white/40 text-xs mt-0.5">
-                {fase === 'iniciando' ? 'Iniciando cámara...' : 'Posicioná el QR dentro del cuadrado'}
-              </p>
-            </div>
-            <button
-              onClick={() => navigate(-1)}
-              className="w-10 h-10 flex items-center justify-center rounded-full bg-white/10 text-white text-lg active:scale-90 transition-transform"
-            >
-              ✕
-            </button>
-          </div>
+            ✕
+          </button>
+        </div>
 
-          <div className="flex-1 relative">
-            {fase === 'iniciando' && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black" style={{ zIndex: 51 }}>
-                <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin" />
-              </div>
-            )}
-            {/* Viewfinder corners + scan line */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="relative" style={{ width: 260, height: 260 }}>
-                <span className="absolute top-0 left-0 w-10 h-10 border-t-[3px] border-l-[3px] border-accent" />
-                <span className="absolute top-0 right-0 w-10 h-10 border-t-[3px] border-r-[3px] border-accent" />
-                <span className="absolute bottom-0 left-0 w-10 h-10 border-b-[3px] border-l-[3px] border-accent" />
-                <span className="absolute bottom-0 right-0 w-10 h-10 border-b-[3px] border-r-[3px] border-accent" />
-                {fase === 'escaneando' && (
-                  <div
-                    className="absolute left-2 right-2 h-0.5 rounded-full animate-scan-line"
-                    style={{ background: 'linear-gradient(to right, transparent, #00d4aa, transparent)', boxShadow: '0 0 8px #00d4aa, 0 0 16px #00d4aa44' }}
-                  />
-                )}
-              </div>
-            </div>
-          </div>
-
-          {fase === 'escaneando' && (
-            <div
-              className="shrink-0 px-6 py-5 text-center pointer-events-auto"
-              style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%)' }}
-            >
-              <p className="text-white/40 text-sm">Acercá el teléfono al código QR del checkpoint</p>
+        {/* Camera area */}
+        <div className="flex-1 relative overflow-hidden">
+          {/* Spinner while camera initializes */}
+          {fase === 'iniciando' && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black z-10">
+              <div className="w-10 h-10 border-2 border-accent border-t-transparent rounded-full animate-spin" />
             </div>
           )}
+
+          {/* html5-qrcode injects video here */}
+          <div id={READER_ID} className="absolute inset-0" />
+
+          {/* Custom viewfinder — corners + scan line */}
+          <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
+            <div
+              className="relative"
+              style={{ width: 'min(260px, 75vw)', height: 'min(260px, 75vw)' }}
+            >
+              <span className="absolute top-0 left-0 w-9 h-9 border-t-[3px] border-l-[3px] border-accent" />
+              <span className="absolute top-0 right-0 w-9 h-9 border-t-[3px] border-r-[3px] border-accent" />
+              <span className="absolute bottom-0 left-0 w-9 h-9 border-b-[3px] border-l-[3px] border-accent" />
+              <span className="absolute bottom-0 right-0 w-9 h-9 border-b-[3px] border-r-[3px] border-accent" />
+              {fase === 'escaneando' && (
+                <div
+                  className="absolute left-2 right-2 h-0.5 rounded-full animate-scan-line"
+                  style={{
+                    background: 'linear-gradient(to right, transparent, #00d4aa, transparent)',
+                    boxShadow: '0 0 8px #00d4aa, 0 0 16px #00d4aa44',
+                  }}
+                />
+              )}
+            </div>
+          </div>
         </div>
-      )}
+
+        {/* Footer instruction */}
+        {fase === 'escaneando' && (
+          <div
+            className="shrink-0 px-6 py-5 text-center"
+            style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)' }}
+          >
+            <p className="text-white/40 text-sm">Acercá el teléfono al código QR del checkpoint</p>
+          </div>
+        )}
+      </div>
 
       {/* ── Error de cámara ── */}
       {fase === 'errorCamara' && (
         <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-4 px-8 text-center">
           <div className="w-20 h-20 rounded-full bg-danger/20 border-2 border-danger flex items-center justify-center text-4xl">📷</div>
-          <p className="text-white font-semibold">Sin acceso a la cámara</p>
-          <p className="text-white/50 text-sm leading-relaxed">{errorCamara}</p>
-          <button onClick={() => navigate(-1)} className="mt-2 px-6 py-3 rounded-2xl bg-dark-100 border border-white/10 text-white/60 active:scale-95 transition-transform">
+          <p className="text-white font-semibold text-lg">Sin acceso a la cámara</p>
+          <p className="text-white/50 text-sm leading-relaxed max-w-xs">{errorCamara}</p>
+          <button
+            onClick={() => navigate(-1)}
+            className="mt-2 w-full max-w-xs py-4 rounded-2xl bg-dark-100 border border-white/10 text-white/60 font-medium active:scale-95 transition-transform"
+          >
             Volver
           </button>
         </div>
@@ -219,32 +240,35 @@ export default function QRScannerPage() {
       {/* ── Formulario de observación ── */}
       {(fase === 'form' || fase === 'enviando') && (
         <div className="min-h-screen bg-dark-300 flex flex-col">
-          <div className="bg-dark-400 px-4 pt-safe-top pb-4 border-b border-white/5">
+          {/* Header */}
+          <div className="bg-dark-400 px-4 pt-safe-top pb-4 border-b border-white/5 shrink-0">
             <button onClick={() => navigate(-1)} className="text-accent text-sm mb-2 flex items-center gap-1">
               <span>←</span> <span>Volver</span>
             </button>
-            <p className="text-white/40 text-xs uppercase tracking-wider mb-0.5">Checkpoint</p>
+            <p className="text-white/40 text-xs uppercase tracking-wider mb-0.5">Checkpoint detectado</p>
             <h1 className="font-bold text-white text-xl leading-tight">{checkpoint?.nombre}</h1>
             {!ejecucionActiva && (
               <div className="mt-2 flex items-center gap-2 bg-warning/10 border border-warning/30 rounded-lg px-3 py-1.5">
                 <span className="text-warning text-sm">⚠</span>
-                <p className="text-warning text-xs">Sin ronda activa</p>
+                <p className="text-warning text-xs">Sin ronda activa — el supervisor debe asignarte una</p>
               </div>
             )}
           </div>
 
-          <div className="flex-1 px-4 py-5 flex flex-col gap-5 overflow-auto">
+          {/* Scrollable content */}
+          <div className="flex-1 px-4 py-4 flex flex-col gap-4 overflow-auto">
+            {/* Tipo selector */}
             <div>
-              <p className="text-white/40 text-xs uppercase tracking-wider mb-3">¿Qué registrás?</p>
+              <p className="text-white/40 text-xs uppercase tracking-wider mb-2">¿Qué registrás?</p>
               <div className="grid grid-cols-3 gap-2">
                 {TIPOS.map((t) => (
                   <button
                     key={t.key}
                     onClick={() => handleTipoChange(t.key)}
-                    className={`flex flex-col items-center gap-1.5 rounded-2xl px-2 py-3.5 border-2 transition-all duration-150 active:scale-95
+                    className={`flex flex-col items-center gap-1.5 rounded-2xl px-1.5 py-3 border-2 transition-all duration-150 active:scale-95
                       ${tipo === t.key ? `${t.bg} ${t.border}` : 'border-white/10 bg-dark-200'}`}
                   >
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-xl font-bold
+                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-lg font-bold
                       ${tipo === t.key ? t.iconBg : 'bg-white/5 text-white/30'}`}>
                       {t.icon}
                     </div>
@@ -256,13 +280,14 @@ export default function QRScannerPage() {
               </div>
             </div>
 
-            <div className="flex-1 flex flex-col">
+            {/* Nota */}
+            <div className="flex-1 flex flex-col min-h-0">
               <label className="block text-white/50 text-xs uppercase tracking-wider mb-2">
                 Observación <span className="text-danger">*</span>
               </label>
               <textarea
                 ref={notaRef}
-                className={`input-field flex-1 min-h-[140px] resize-none text-base leading-relaxed transition-colors
+                className={`input-field flex-1 min-h-[120px] resize-none text-base leading-relaxed transition-colors
                   ${notaError ? 'border-danger focus:border-danger' : ''}`}
                 placeholder={tipoActual.placeholder}
                 value={nota}
@@ -276,11 +301,12 @@ export default function QRScannerPage() {
             </div>
           </div>
 
-          <div className="px-4 pb-safe-bottom pt-3 border-t border-white/5 bg-dark-300">
+          {/* Submit button */}
+          <div className="px-4 pb-safe-bottom pt-3 border-t border-white/5 bg-dark-300 shrink-0">
             <button
               onClick={enviar}
               disabled={fase === 'enviando'}
-              className={`w-full py-5 rounded-2xl font-bold text-lg transition-all duration-150 active:scale-[0.98] disabled:opacity-50 ${tipoActual.btn}`}
+              className={`w-full py-4 rounded-2xl font-bold text-lg transition-all duration-150 active:scale-[0.98] disabled:opacity-50 ${tipoActual.btn}`}
             >
               {fase === 'enviando'
                 ? <span className="flex items-center justify-center gap-2">
@@ -303,11 +329,11 @@ export default function QRScannerPage() {
         const esNeutro = r.ok === null
         return (
           <div className="min-h-screen bg-dark-300 flex flex-col items-center justify-center px-6 text-center">
-            <div className={`w-28 h-28 rounded-full flex items-center justify-center mb-6
+            <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-5
               ${esOk ? (r.offline ? 'bg-warning/20 border-2 border-warning' : 'bg-accent/20 border-2 border-accent')
                 : esNeutro ? 'bg-warning/20 border-2 border-warning'
                 : 'bg-danger/20 border-2 border-danger'}`}>
-              <span className={`text-5xl
+              <span className={`text-4xl
                 ${esOk ? (r.offline ? 'text-warning' : 'text-accent') : esNeutro ? 'text-warning' : 'text-danger'}`}>
                 {esOk ? (r.offline ? '⊘' : '✓') : esNeutro ? '⊙' : '✗'}
               </span>
@@ -325,10 +351,10 @@ export default function QRScannerPage() {
               </span>
             )}
 
-            <h2 className="text-2xl font-bold text-white mb-2">{r.titulo}</h2>
-            <p className="text-white/50 text-sm mb-2">{r.subtitulo}</p>
-            {r.hora && <p className="text-white/30 text-xs mb-8">{r.hora}</p>}
-            {!r.hora && <div className="mb-8" />}
+            <h2 className="text-xl font-bold text-white mb-2">{r.titulo}</h2>
+            <p className="text-white/50 text-sm mb-1">{r.subtitulo}</p>
+            {r.hora && <p className="text-white/30 text-xs mb-6">{r.hora}</p>}
+            {!r.hora && <div className="mb-6" />}
 
             <div className="w-full space-y-3">
               <button
@@ -349,6 +375,6 @@ export default function QRScannerPage() {
           </div>
         )
       })()}
-    </div>
+    </>
   )
 }
