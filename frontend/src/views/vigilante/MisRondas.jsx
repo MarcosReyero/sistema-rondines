@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../lib/api'
 import { getUser, logout } from '../../lib/auth'
-import { useOfflineSync } from '../../hooks/useOfflineSync'
+import { getScansPendientes } from '../../lib/db'
 
 export default function MisRondas() {
   const navigate = useNavigate()
@@ -10,10 +10,14 @@ export default function MisRondas() {
   const [ejecucion, setEjecucion] = useState(null)   // ronda activa asignada
   const [loading, setLoading] = useState(true)
   const [online, setOnline] = useState(navigator.onLine)
-  useOfflineSync()
+  const [scansPendientes, setScansPendientes] = useState(0)
 
   useEffect(() => {
-    const onOnline = () => setOnline(true)
+    getScansPendientes().then((s) => setScansPendientes(s.length)).catch(() => {})
+    const onOnline = () => {
+      setOnline(true)
+      getScansPendientes().then((s) => setScansPendientes(s.length)).catch(() => {})
+    }
     const onOffline = () => setOnline(false)
     window.addEventListener('online', onOnline)
     window.addEventListener('offline', onOffline)
@@ -87,7 +91,11 @@ export default function MisRondas() {
             <span className="text-warning text-base mt-0.5">⚠</span>
             <div>
               <p className="text-warning text-sm font-medium">Sin conexión</p>
-              <p className="text-warning/70 text-xs mt-0.5">Los scans se guardan localmente y se sincronizan al reconectar.</p>
+              <p className="text-warning/70 text-xs mt-0.5">
+                {scansPendientes > 0
+                  ? `${scansPendientes} scan${scansPendientes !== 1 ? 's' : ''} guardado${scansPendientes !== 1 ? 's' : ''} localmente — se sincronizarán al reconectar.`
+                  : 'Los scans se guardan localmente y se sincronizan al reconectar.'}
+              </p>
             </div>
           </div>
         )}

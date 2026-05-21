@@ -1,6 +1,7 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { isAuthenticated, isSupervisor } from './lib/auth'
+import SyncBanner from './components/SyncBanner'
 
 import Login from './views/vigilante/Login'
 import MisRondas from './views/vigilante/MisRondas'
@@ -30,6 +31,7 @@ function RequireSupervisor({ children }) {
 export default function App() {
   return (
     <BrowserRouter>
+      <SyncBanner />
       <Routes>
         <Route path="/login" element={<Login />} />
 
