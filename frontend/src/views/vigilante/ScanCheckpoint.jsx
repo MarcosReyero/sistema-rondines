@@ -94,7 +94,7 @@ export default function ScanCheckpoint() {
       setResultado({
         ok: false,
         titulo: 'Sin ronda activa',
-        subtitulo: 'Iniciá una ronda desde "Mis Rondas" antes de escanear.',
+        subtitulo: 'El supervisor debe asignarte una ronda antes de escanear.',
       })
       return
     }
