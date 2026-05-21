@@ -31,6 +31,15 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+      },
+      animation: {
+        'scan-line': 'scan-line 2s ease-in-out infinite',
+      },
+      keyframes: {
+        'scan-line': {
+          '0%, 100%': { top: '2px', opacity: '1' },
+          '50%': { top: 'calc(100% - 2px)', opacity: '0.7' },
+        },
       }
     },
   },

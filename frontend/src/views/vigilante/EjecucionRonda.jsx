@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../../lib/api'
+import QRScannerModal from '../../components/QRScannerModal'
 
 const TIPO_CONFIG = {
   observacion: { icon: '✓', color: 'text-accent', bg: 'bg-accent/15', label: 'OK' },
@@ -15,6 +16,7 @@ export default function EjecucionRonda() {
   const [loading, setLoading] = useState(true)
   const [finalizando, setFinalizando] = useState(false)
   const [confirmarFin, setConfirmarFin] = useState(false)
+  const [scannerAbierto, setScannerAbierto] = useState(false)
 
   const cargar = useCallback(() => {
     api.get(`/ejecuciones/${id}/`)
@@ -115,7 +117,7 @@ export default function EjecucionRonda() {
           <div className="text-center py-12">
             <p className="text-4xl mb-3">📱</p>
             <p className="text-white/40 text-sm">Escaneá los QR de cada checkpoint</p>
-            <p className="text-white/25 text-xs mt-1">Los puntos se irán marcando aquí</p>
+            <p className="text-white/25 text-xs mt-1">Usá el botón de abajo para abrir la cámara</p>
           </div>
         )}
 
@@ -148,15 +150,23 @@ export default function EjecucionRonda() {
       </div>
 
       {/* Footer */}
-      <div className="px-4 pb-safe-bottom pt-3 border-t border-white/5 bg-dark-300">
+      <div className="px-4 pb-safe-bottom pt-3 border-t border-white/5 bg-dark-300 space-y-2">
+        {estado === 'en_curso' && (
+          <button
+            onClick={() => setScannerAbierto(true)}
+            className="w-full py-4 rounded-2xl font-bold text-base bg-accent text-dark-500 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
+          >
+            <span className="text-xl">⬛</span> Escanear QR
+          </button>
+        )}
         {estado === 'en_curso' ? (
           <button
             onClick={() => setConfirmarFin(true)}
             disabled={finalizando}
-            className={`w-full py-4 rounded-2xl font-semibold text-base transition-all duration-200 active:scale-[0.98] disabled:opacity-50
+            className={`w-full py-3.5 rounded-2xl font-semibold text-sm transition-all duration-200 active:scale-[0.98] disabled:opacity-50
               ${todosCompletos
-                ? 'bg-accent text-dark-500'
-                : 'bg-dark-100 border border-white/10 text-white/50'}`}
+                ? 'bg-dark-100 border border-accent/40 text-accent'
+                : 'bg-dark-100 border border-white/10 text-white/30'}`}
           >
             {todosCompletos ? '✓ Finalizar Ronda' : `Finalizar (${progreso.completados}/${progreso.total})`}
           </button>
@@ -167,6 +177,17 @@ export default function EjecucionRonda() {
           </div>
         )}
       </div>
+
+      {/* Scanner QR */}
+      {scannerAbierto && (
+        <QRScannerModal
+          onScan={(uuid) => {
+            setScannerAbierto(false)
+            navigate(`/check/${uuid}`)
+          }}
+          onClose={() => setScannerAbierto(false)}
+        />
+      )}
 
       {/* Modal confirmación finalizar */}
       {confirmarFin && (
