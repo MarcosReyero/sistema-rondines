@@ -29,13 +29,35 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         runtimeCaching: [
           {
-            urlPattern: /^https?.*\/api\/(rondas|instalaciones|checkpoints)\//,
+            // Static app data: instalaciones, rondas, checkpoints
+            urlPattern: /\/api\/(rondas|instalaciones|checkpoints)\//,
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'api-cache',
-              expiration: { maxEntries: 50, maxAgeSeconds: 3600 }
+              cacheName: 'api-static',
+              networkTimeoutSeconds: 4,
+              expiration: { maxEntries: 60, maxAgeSeconds: 86400 }
             }
-          }
+          },
+          {
+            // Ejecuciones: needed for page reload offline
+            urlPattern: /\/api\/ejecuciones\//,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-ejecuciones',
+              networkTimeoutSeconds: 4,
+              expiration: { maxEntries: 40, maxAgeSeconds: 86400 }
+            }
+          },
+          {
+            // Checkpoint by UUID: needed for QR scan offline
+            urlPattern: /\/api\/checkpoints\/uuid\//,
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'api-checkpoints-uuid',
+              networkTimeoutSeconds: 4,
+              expiration: { maxEntries: 200, maxAgeSeconds: 604800 }
+            }
+          },
         ]
       }
     })

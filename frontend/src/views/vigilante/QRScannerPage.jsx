@@ -59,6 +59,20 @@ export default function QRScannerPage() {
         setUuidActual(uuid)
         setFase('cargando')
 
+        // When already offline, skip the network round-trip and go straight to cache
+        if (!navigator.onLine) {
+          const cpCached = getCheckpointCacheado(uuid)
+          if (cpCached) {
+            setCheckpoint(cpCached)
+            setEjecucionActiva(getEjecucionCacheada())
+            setFase('form')
+          } else {
+            setResultado({ ok: false, titulo: 'Sin conexión', subtitulo: 'Este checkpoint no está disponible offline. Abrí la ronda al menos una vez con conexión.' })
+            setFase('resultado')
+          }
+          return
+        }
+
         try {
           const [{ data: cp }, ejecucionData] = await Promise.all([
             api.get(`/checkpoints/uuid/${uuid}/`),
@@ -73,14 +87,14 @@ export default function QRScannerPage() {
           setEjecucionActiva(ej)
           setFase('form')
         } catch {
-          // Network error — try offline cache
+          // Network failed despite appearing online — try cache as fallback
           const cpCached = getCheckpointCacheado(uuid)
           if (cpCached) {
             setCheckpoint(cpCached)
             setEjecucionActiva(getEjecucionCacheada())
             setFase('form')
           } else {
-            setResultado({ ok: false, titulo: 'QR no reconocido', subtitulo: navigator.onLine ? 'Este checkpoint no existe o fue desactivado.' : 'Sin conexión y este checkpoint no está en caché. Conectate al menos una vez para habilitar el modo offline.' })
+            setResultado({ ok: false, titulo: 'QR no reconocido', subtitulo: 'Este checkpoint no existe o fue desactivado.' })
             setFase('resultado')
           }
         }

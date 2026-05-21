@@ -73,6 +73,9 @@ export function cachearEjecucionActiva(ejecucion) {
         ronda_nombre: ejecucion.ronda_nombre,
         instalacion_nombre: ejecucion.instalacion_nombre,
         estado: ejecucion.estado,
+        progreso: ejecucion.progreso ?? null,
+        hora_limite: ejecucion.hora_limite ?? null,
+        vencida: ejecucion.vencida ?? false,
       }))
     } else {
       localStorage.removeItem('rondines_ejecucion')

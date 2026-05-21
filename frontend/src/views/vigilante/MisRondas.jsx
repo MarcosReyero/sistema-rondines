@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import api from '../../lib/api'
 import { getUser, logout } from '../../lib/auth'
-import { getScansPendientes } from '../../lib/db'
+import { getScansPendientes, cachearEjecucionActiva, getEjecucionCacheada } from '../../lib/db'
 
 export default function MisRondas() {
   const navigate = useNavigate()
@@ -31,9 +31,14 @@ export default function MisRondas() {
     try {
       const { data } = await api.get('/ejecuciones/?estado=en_curso')
       const lista = data.results || data
-      setEjecucion(lista[0] || null)
-    } catch (err) {
-      console.error(err)
+      const ej = lista[0] || null
+      setEjecucion(ej)
+      // Keep cache in sync (also clears when no active round)
+      cachearEjecucionActiva(ej)
+    } catch {
+      // Offline or server error — show cached data
+      const cached = getEjecucionCacheada()
+      setEjecucion(cached)
     } finally {
       setLoading(false)
     }
@@ -109,7 +114,10 @@ export default function MisRondas() {
             {/* Ronda activa asignada */}
             {ejecucion ? (
               <div>
-                <p className="text-white/30 text-xs uppercase tracking-wider mb-2">Ronda en curso</p>
+                <p className="text-white/30 text-xs uppercase tracking-wider mb-2">
+                  Ronda en curso
+                  {!online && <span className="ml-2 text-warning/70 normal-case font-normal">· datos en caché</span>}
+                </p>
                 <button
                   onClick={() => navigate(`/ejecucion/${ejecucion.id}`)}
                   className="w-full bg-dark-200 border border-white/10 rounded-2xl px-4 py-4 text-left active:scale-[0.98] transition-transform"

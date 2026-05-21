@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import api from '../../lib/api'
-import { cachearCheckpoints, cachearEjecucionActiva } from '../../lib/db'
+import { cachearCheckpoints, cachearEjecucionActiva, getEjecucionCacheada } from '../../lib/db'
 
 const TIPO_CONFIG = {
   observacion: { icon: '✓', color: 'text-accent', bg: 'bg-accent/15', label: 'OK' },
@@ -31,7 +31,15 @@ export default function EjecucionRonda() {
         // Cache for offline QR scanning
         if (data.estado === 'en_curso') {
           cachearEjecucionActiva(data)
-          if (data.checkpoints_ronda?.length) cachearCheckpoints(data.checkpoints_ronda)
+          if (data.checkpoints_ronda?.length) {
+            cachearCheckpoints(data.checkpoints_ronda)
+          } else {
+            // Backend doesn't include checkpoints_ronda yet — fetch ronda separately
+            api.get(`/rondas/${data.ronda}/`).then(({ data: ronda }) => {
+              const cps = (ronda.checkpoint_ordenes || []).map((o) => o.checkpoint)
+              if (cps.length) cachearCheckpoints(cps)
+            }).catch(() => {})
+          }
         }
 
         if (pendingNewScan.current) {
@@ -53,7 +61,11 @@ export default function EjecucionRonda() {
           setEjecucion(data)
         }
       })
-      .catch(console.error)
+      .catch(() => {
+        // Offline — hydrate from localStorage cache so the screen isn't blank
+        const cached = getEjecucionCacheada()
+        if (cached && String(cached.id) === String(id)) setEjecucion(cached)
+      })
       .finally(() => setLoading(false))
   }, [id])
 
