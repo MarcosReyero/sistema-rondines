@@ -321,15 +321,29 @@ class EjecucionListCreateView(generics.ListCreateAPIView):
         except Ronda.DoesNotExist:
             return Response({'error': 'Ronda no encontrada'}, status=status.HTTP_404_NOT_FOUND)
 
+        # Supervisores pueden asignar a un vigilante específico
+        vigilante = request.user
+        try:
+            es_supervisor = request.user.perfil.rol == 'supervisor'
+        except Perfil.DoesNotExist:
+            es_supervisor = False
+
+        vigilante_id = request.data.get('vigilante_id')
+        if es_supervisor and vigilante_id:
+            try:
+                vigilante = User.objects.get(id=vigilante_id)
+            except User.DoesNotExist:
+                return Response({'error': 'Vigilante no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
         en_curso = EjecucionRonda.objects.filter(
-            vigilante=request.user, ronda=ronda, estado='en_curso'
+            vigilante=vigilante, ronda=ronda, estado='en_curso'
         ).first()
         if en_curso:
             return Response(EjecucionRondaSerializer(en_curso).data, status=status.HTTP_200_OK)
 
         ejecucion = EjecucionRonda.objects.create(
             ronda=ronda,
-            vigilante=request.user,
+            vigilante=vigilante,
             estado='en_curso'
         )
 

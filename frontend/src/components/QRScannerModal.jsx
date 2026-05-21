@@ -4,7 +4,7 @@ import { Html5Qrcode } from 'html5-qrcode'
 const READER_ID = 'qr-reader-container'
 
 export default function QRScannerModal({ onScan, onClose }) {
-  const [estado, setEstado] = useState('iniciando') // iniciando | escaneando | detectado | error
+  const [estado, setEstado] = useState('iniciando') // iniciando | escaneando | error
   const [errorMsg, setErrorMsg] = useState('')
   const scannerRef = useRef(null)
   const resultadoRef = useRef(false)
@@ -19,15 +19,14 @@ export default function QRScannerModal({ onScan, onClose }) {
       (text) => {
         if (resultadoRef.current) return
         resultadoRef.current = true
-        setEstado('detectado')
 
         // Extraer UUID de una URL tipo /check/{uuid} o usar el texto directo
         const match = text.match(/\/check\/([a-f0-9-]{36})/i)
         const uuid = match ? match[1] : text.trim()
 
-        qr.stop().catch(() => {}).finally(() => {
-          setTimeout(() => onScan(uuid), 300)
-        })
+        // Detener cámara en segundo plano y navegar de inmediato
+        qr.stop().catch(() => {})
+        onScan(uuid)
       },
       () => {} // Error por frame sin QR — ignorar
     )
@@ -59,7 +58,6 @@ export default function QRScannerModal({ onScan, onClose }) {
           <p className="text-white/40 text-xs mt-0.5">
             {estado === 'iniciando' && 'Iniciando cámara...'}
             {estado === 'escaneando' && 'Posicioná el QR dentro del cuadrado'}
-            {estado === 'detectado' && '✓ Código detectado'}
             {estado === 'error' && 'Error de cámara'}
           </p>
         </div>
@@ -124,12 +122,6 @@ export default function QRScannerModal({ onScan, onClose }) {
                   />
                 )}
 
-                {/* Flash verde al detectar */}
-                {estado === 'detectado' && (
-                  <div className="absolute inset-0 bg-accent/20 border-2 border-accent rounded-sm flex items-center justify-center">
-                    <span className="text-5xl text-accent">✓</span>
-                  </div>
-                )}
               </div>
             </div>
           </>
@@ -142,12 +134,7 @@ export default function QRScannerModal({ onScan, onClose }) {
         style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)' }}
       >
         {estado === 'escaneando' && (
-          <p className="text-white/40 text-sm">
-            Acercá el teléfono al código QR del checkpoint
-          </p>
-        )}
-        {estado === 'detectado' && (
-          <p className="text-accent text-sm font-medium">Abriendo checkpoint...</p>
+          <p className="text-white/40 text-sm">Acercá el teléfono al código QR del checkpoint</p>
         )}
       </div>
     </div>

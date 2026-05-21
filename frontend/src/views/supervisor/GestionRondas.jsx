@@ -22,6 +22,7 @@ function SortableItem({ cp }) {
 export default function GestionRondas() {
   const [rondas, setRondas] = useState([])
   const [instalaciones, setInstalaciones] = useState([])
+  const [vigilantes, setVigilantes] = useState([])
   const [checkpointsPorInst, setCheckpointsPorInst] = useState([])
   const [showForm, setShowForm] = useState(false)
   const [editando, setEditando] = useState(null)
@@ -29,6 +30,11 @@ export default function GestionRondas() {
   const [cpSeleccionados, setCpSeleccionados] = useState([])
   const [guardando, setGuardando] = useState(false)
   const [loading, setLoading] = useState(true)
+  // Asignación
+  const [asignando, setAsignando] = useState(null)   // ronda a asignar
+  const [vigilanteSeleccionado, setVigilanteSeleccionado] = useState('')
+  const [guardandoAsig, setGuardandoAsig] = useState(false)
+  const [errorAsig, setErrorAsig] = useState('')
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -39,9 +45,11 @@ export default function GestionRondas() {
     Promise.all([
       api.get('/rondas/'),
       api.get('/instalaciones/'),
-    ]).then(([r, i]) => {
+      api.get('/vigilantes/'),
+    ]).then(([r, i, v]) => {
       setRondas(r.data.results || r.data)
       setInstalaciones(i.data.results || i.data)
+      setVigilantes(v.data.results || v.data)
     }).finally(() => setLoading(false))
   }, [])
 
@@ -104,6 +112,26 @@ export default function GestionRondas() {
     }
   }
 
+  const abrirAsignar = (ronda) => {
+    setAsignando(ronda)
+    setVigilanteSeleccionado('')
+    setErrorAsig('')
+  }
+
+  const confirmarAsignacion = async () => {
+    if (!vigilanteSeleccionado) { setErrorAsig('Seleccioná un vigilante'); return }
+    setGuardandoAsig(true)
+    setErrorAsig('')
+    try {
+      await api.post('/ejecuciones/', { ronda: asignando.id, vigilante_id: Number(vigilanteSeleccionado) })
+      setAsignando(null)
+    } catch (err) {
+      setErrorAsig(err.response?.data?.error || 'Error al asignar')
+    } finally {
+      setGuardandoAsig(false)
+    }
+  }
+
   const desactivar = async (ronda) => {
     if (!confirm(`¿Desactivar "${ronda.nombre}"?`)) return
     await api.delete(`/rondas/${ronda.id}/`)
@@ -133,6 +161,9 @@ export default function GestionRondas() {
                 <p className="text-white/40 text-sm">{ronda.instalacion_nombre} · {ronda.checkpoints_count} checkpoints</p>
               </div>
               <div className="flex gap-2 shrink-0">
+                <button onClick={() => abrirAsignar(ronda)} className="text-sm text-accent/80 hover:text-accent px-3 py-1.5 rounded-lg hover:bg-accent/10 transition-colors font-medium">
+                  Asignar →
+                </button>
                 <button onClick={() => abrirEditar(ronda)} className="text-sm text-white/40 hover:text-white px-3 py-1.5 rounded-lg hover:bg-white/5 transition-colors">
                   Editar
                 </button>
@@ -148,7 +179,42 @@ export default function GestionRondas() {
         </div>
       )}
 
-      {/* Modal */}
+      {/* Modal asignar ronda a vigilante */}
+      {asignando && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
+          <div className="bg-dark-200 rounded-2xl p-6 w-full max-w-sm border border-white/10">
+            <h3 className="font-bold text-white text-lg mb-1">Asignar ronda</h3>
+            <p className="text-white/40 text-sm mb-4">{asignando.nombre} · {asignando.instalacion_nombre}</p>
+            <div className="mb-4">
+              <label className="text-white/50 text-sm block mb-1.5">Vigilante</label>
+              <select
+                className="input-field"
+                value={vigilanteSeleccionado}
+                onChange={(e) => { setVigilanteSeleccionado(e.target.value); setErrorAsig('') }}
+              >
+                <option value="">Seleccioná un vigilante...</option>
+                {vigilantes.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.first_name ? `${v.first_name} ${v.last_name || ''}`.trim() : v.username}
+                  </option>
+                ))}
+              </select>
+              {errorAsig && <p className="text-danger text-xs mt-1">{errorAsig}</p>}
+            </div>
+            <p className="text-white/25 text-xs mb-4">
+              Si el vigilante ya tiene una ronda en curso con esta misma ronda, se retomará sin crear una nueva.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setAsignando(null)} className="btn-ghost flex-1">Cancelar</button>
+              <button onClick={confirmarAsignacion} disabled={guardandoAsig} className="btn-primary flex-1 disabled:opacity-50">
+                {guardandoAsig ? 'Asignando...' : 'Asignar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal crear/editar ronda */}
       {showForm && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
           <div className="bg-dark-200 rounded-2xl p-6 w-full max-w-2xl border border-white/10 max-h-[90vh] overflow-auto">
