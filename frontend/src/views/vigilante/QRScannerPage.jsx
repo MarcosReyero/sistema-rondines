@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Html5Qrcode } from 'html5-qrcode'
 import api from '../../lib/api'
-import { guardarScanOffline } from '../../lib/db'
+import { guardarScanOffline, getCheckpointCacheado, getEjecucionCacheada } from '../../lib/db'
 
 const READER_ID = 'qr-page-reader'
 
@@ -14,6 +14,8 @@ const TIPOS = [
 
 export default function QRScannerPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const ejecucionIdHint = location.state?.ejecucionId ?? null
   const [fase, setFase] = useState('iniciando') // iniciando | escaneando | errorCamara | cargando | form | enviando | resultado
   const [errorCamara, setErrorCamara] = useState('')
   const [checkpoint, setCheckpoint] = useState(null)
@@ -58,16 +60,29 @@ export default function QRScannerPage() {
         setFase('cargando')
 
         try {
-          const [{ data: cp }, { data: ejecs }] = await Promise.all([
+          const [{ data: cp }, ejecucionData] = await Promise.all([
             api.get(`/checkpoints/uuid/${uuid}/`),
-            api.get('/ejecuciones/?estado=en_curso'),
+            ejecucionIdHint
+              ? api.get(`/ejecuciones/${ejecucionIdHint}/`).then((r) => r.data)
+              : api.get('/ejecuciones/?estado=en_curso').then((r) => (r.data.results || r.data)[0] || null),
           ])
           setCheckpoint(cp)
-          setEjecucionActiva((ejecs.results || ejecs)[0] || null)
+          const ej = ejecucionData?.estado !== undefined
+            ? (ejecucionData.estado === 'en_curso' ? ejecucionData : null)
+            : ejecucionData
+          setEjecucionActiva(ej)
           setFase('form')
         } catch {
-          setResultado({ ok: false, titulo: 'QR no reconocido', subtitulo: 'Este checkpoint no existe o fue desactivado.' })
-          setFase('resultado')
+          // Network error — try offline cache
+          const cpCached = getCheckpointCacheado(uuid)
+          if (cpCached) {
+            setCheckpoint(cpCached)
+            setEjecucionActiva(getEjecucionCacheada())
+            setFase('form')
+          } else {
+            setResultado({ ok: false, titulo: 'QR no reconocido', subtitulo: navigator.onLine ? 'Este checkpoint no existe o fue desactivado.' : 'Sin conexión y este checkpoint no está en caché. Conectate al menos una vez para habilitar el modo offline.' })
+            setFase('resultado')
+          }
         }
       },
       () => {}
@@ -113,8 +128,8 @@ export default function QRScannerPage() {
     }
 
     try {
-      await api.post(`/ejecuciones/${ejecucionActiva.id}/scan/`, payload)
-      setResultado({ ok: true, titulo: checkpoint.nombre, subtitulo: tipo === 'observacion' ? 'Sin novedades' : tipo === 'incidencia' ? 'Incidencia registrada' : 'Alarma registrada', hora: new Date(timestamp).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }), tipo })
+      const { data: scanResp } = await api.post(`/ejecuciones/${ejecucionActiva.id}/scan/`, payload)
+      setResultado({ ok: true, titulo: checkpoint.nombre, subtitulo: tipo === 'observacion' ? 'Sin novedades' : tipo === 'incidencia' ? 'Incidencia registrada' : 'Alarma registrada', hora: new Date(timestamp).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' }), tipo, _scan: scanResp.scan, _progreso: scanResp.progreso, _ejecucionId: ejecucionActiva.id })
       setFase('resultado')
     } catch (err) {
       if (err.response?.status === 409) {
@@ -358,7 +373,17 @@ export default function QRScannerPage() {
 
             <div className="w-full space-y-3">
               <button
-                onClick={() => navigate(-1)}
+                onClick={() => {
+                  const r = resultado
+                  if (r?._ejecucionId) {
+                    navigate(`/ejecucion/${r._ejecucionId}`, {
+                      state: r._scan ? { newScan: r._scan, progreso: r._progreso } : undefined,
+                      replace: true,
+                    })
+                  } else {
+                    navigate(-1)
+                  }
+                }}
                 className="w-full py-4 rounded-2xl font-semibold bg-dark-100 border border-white/10 text-white/70 active:scale-95 transition-transform"
               >
                 ← Volver a la ronda

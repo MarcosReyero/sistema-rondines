@@ -47,6 +47,45 @@ export async function eliminarScan(id) {
   })
 }
 
+// ─── Caché offline: checkpoints y ejecución activa ───────────────────────────
+
+export function cachearCheckpoints(checkpoints) {
+  try {
+    const mapa = {}
+    checkpoints.forEach((cp) => { mapa[String(cp.codigo_qr)] = cp })
+    localStorage.setItem('rondines_cp_cache', JSON.stringify(mapa))
+  } catch {}
+}
+
+export function getCheckpointCacheado(uuid) {
+  try {
+    const mapa = JSON.parse(localStorage.getItem('rondines_cp_cache') || '{}')
+    return mapa[String(uuid)] || null
+  } catch { return null }
+}
+
+export function cachearEjecucionActiva(ejecucion) {
+  try {
+    if (ejecucion) {
+      localStorage.setItem('rondines_ejecucion', JSON.stringify({
+        id: ejecucion.id,
+        ronda: ejecucion.ronda,
+        ronda_nombre: ejecucion.ronda_nombre,
+        instalacion_nombre: ejecucion.instalacion_nombre,
+        estado: ejecucion.estado,
+      }))
+    } else {
+      localStorage.removeItem('rondines_ejecucion')
+    }
+  } catch {}
+}
+
+export function getEjecucionCacheada() {
+  try {
+    return JSON.parse(localStorage.getItem('rondines_ejecucion') || 'null')
+  } catch { return null }
+}
+
 export async function limpiarScansSincronizados(ids) {
   const db = await openDB()
   const tx = db.transaction(STORE_SCANS, 'readwrite')

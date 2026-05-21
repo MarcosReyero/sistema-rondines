@@ -188,6 +188,7 @@ class EjecucionRondaSerializer(serializers.ModelSerializer):
     vigilante_nombre = serializers.SerializerMethodField()
     scans = CheckpointScanSerializer(many=True, read_only=True)
     progreso = serializers.SerializerMethodField()
+    checkpoints_ronda = serializers.SerializerMethodField()
 
     class Meta:
         model = EjecucionRonda
@@ -195,7 +196,8 @@ class EjecucionRondaSerializer(serializers.ModelSerializer):
             'id', 'ronda', 'ronda_nombre', 'instalacion_nombre',
             'vigilante', 'vigilante_nombre', 'programacion',
             'fecha_inicio', 'fecha_fin', 'hora_limite',
-            'completada', 'estado', 'vencida', 'scans', 'progreso'
+            'completada', 'estado', 'vencida', 'scans', 'progreso',
+            'checkpoints_ronda',
         ]
         read_only_fields = ['vigilante', 'fecha_inicio', 'completada', 'estado', 'vencida']
 
@@ -204,6 +206,10 @@ class EjecucionRondaSerializer(serializers.ModelSerializer):
 
     def get_progreso(self, obj):
         return obj.calcular_progreso()
+
+    def get_checkpoints_ronda(self, obj):
+        cps = obj.ronda.checkpoints.filter(activo=True)
+        return CheckpointBriefSerializer(cps, many=True).data
 
 
 class EjecucionRondaListSerializer(serializers.ModelSerializer):

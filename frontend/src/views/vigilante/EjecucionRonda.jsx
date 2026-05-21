@@ -1,6 +1,7 @@
-import React, { useEffect, useState, useCallback } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import api from '../../lib/api'
+import { cachearCheckpoints, cachearEjecucionActiva } from '../../lib/db'
 
 const TIPO_CONFIG = {
   observacion: { icon: '✓', color: 'text-accent', bg: 'bg-accent/15', label: 'OK' },
@@ -11,21 +12,63 @@ const TIPO_CONFIG = {
 export default function EjecucionRonda() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const [ejecucion, setEjecucion] = useState(null)
   const [loading, setLoading] = useState(true)
   const [finalizando, setFinalizando] = useState(false)
   const [confirmarFin, setConfirmarFin] = useState(false)
+  const [newScanId, setNewScanId] = useState(null)
+  const newScanTimer = useRef(null)
+  // Scan passed via router state — applied as soon as API data arrives
+  const pendingNewScan = useRef(location.state?.newScan ?? null)
+  const pendingProgreso = useRef(location.state?.progreso ?? null)
 
   const cargar = useCallback(() => {
     api.get(`/ejecuciones/${id}/`)
-      .then(({ data }) => setEjecucion(data))
+      .then(({ data }) => {
+        // If we have a pending scan from the scanner, merge it in case the server
+        // hasn't included it yet (race condition) — avoids a blank moment
+        // Cache for offline QR scanning
+        if (data.estado === 'en_curso') {
+          cachearEjecucionActiva(data)
+          if (data.checkpoints_ronda?.length) cachearCheckpoints(data.checkpoints_ronda)
+        }
+
+        if (pendingNewScan.current) {
+          const scan = pendingNewScan.current
+          const prog = pendingProgreso.current
+          pendingNewScan.current = null
+          pendingProgreso.current = null
+          const alreadyIn = data.scans.some((s) => s.id === scan.id)
+          const merged = alreadyIn ? data : {
+            ...data,
+            scans: [...data.scans, scan],
+            progreso: prog ?? data.progreso,
+          }
+          setNewScanId(scan.id)
+          clearTimeout(newScanTimer.current)
+          newScanTimer.current = setTimeout(() => setNewScanId(null), 3000)
+          setEjecucion(merged)
+        } else {
+          setEjecucion(data)
+        }
+      })
       .catch(console.error)
       .finally(() => setLoading(false))
   }, [id])
 
+  useEffect(() => {
+    // Clear router state so refresh/back doesn't re-apply
+    if (location.state?.newScan) {
+      navigate(location.pathname, { replace: true, state: {} })
+    }
+    return () => clearTimeout(newScanTimer.current)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   useEffect(() => { cargar() }, [cargar])
 
-  // Refrescar al volver al foco (después de escanear)
+  // Refresh on focus as fallback (e.g. after offline scan synced)
   useEffect(() => {
     const onFocus = () => cargar()
     window.addEventListener('focus', onFocus)
@@ -36,6 +79,7 @@ export default function EjecucionRonda() {
     setFinalizando(true)
     try {
       await api.post(`/ejecuciones/${id}/finalizar/`)
+      cachearEjecucionActiva(null)
       navigate('/rondas')
     } catch (err) {
       alert(err.response?.data?.error || 'Error al finalizar')
@@ -125,7 +169,7 @@ export default function EjecucionRonda() {
             {[...scans].reverse().map((scan) => {
               const cfg = TIPO_CONFIG[scan.tipo] || TIPO_CONFIG.observacion
               return (
-                <div key={scan.id} className={`flex items-start gap-3 rounded-2xl px-3.5 py-3 ${cfg.bg}`}>
+                <div key={scan.id} className={`flex items-start gap-3 rounded-2xl px-3.5 py-3 ${cfg.bg} ${scan.id === newScanId ? 'ring-2 ring-accent/60 animate-fade-in' : ''}`}>
                   <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-base font-bold shrink-0 bg-dark-300/50 ${cfg.color}`}>
                     {cfg.icon}
                   </div>
@@ -151,7 +195,7 @@ export default function EjecucionRonda() {
       <div className="px-4 pb-safe-bottom pt-3 border-t border-white/5 bg-dark-300 space-y-2">
         {estado === 'en_curso' && (
           <button
-            onClick={() => navigate('/scan')}
+            onClick={() => navigate('/scan', { state: { ejecucionId: parseInt(id) } })}
             className="w-full py-4 rounded-2xl font-bold text-base bg-accent text-dark-500 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
           >
             <span className="text-xl">⬛</span> Escanear QR
