@@ -113,6 +113,14 @@ export default function Dashboard() {
     }
   }, [instalaciones, instSel, cargarCheckpoints])
 
+  // ── Verificar programaciones cada 60 s ─────────────────────────────────────
+  useEffect(() => {
+    const verificar = () => api.post('/programaciones/verificar/').catch(() => {})
+    verificar()
+    const timer = setInterval(verificar, 60_000)
+    return () => clearInterval(timer)
+  }, [])
+
   // ── WebSocket tiempo real ───────────────────────────────────────────────────
   const wsConnected = useWebSocket(useCallback((msg) => {
     if (msg.type === 'checkpoint_escaneado') {
@@ -129,7 +137,7 @@ export default function Dashboard() {
     if (msg.type === 'ronda_iniciada') {
       cargarEjecuciones()
     }
-    if (msg.type === 'ronda_finalizada') {
+    if (msg.type === 'ronda_finalizada' || msg.type === 'ronda_vencida') {
       const ejId = msg.data?.ejecucion_id ?? msg.ejecucion_id
       cargarEjecuciones()
       if (ejecVista?.id === ejId) setEjecVista(null)

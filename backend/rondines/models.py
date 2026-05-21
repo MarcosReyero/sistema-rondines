@@ -98,6 +98,28 @@ class RondaCheckpointOrden(models.Model):
         return f'{self.ronda.nombre} - {self.checkpoint.nombre} (#{self.orden})'
 
 
+class ProgramacionRonda(models.Model):
+    """Rutina horaria: crea ejecuciones automáticamente y las vence si no se completan."""
+    DIAS = [(0,'Lun'),(1,'Mar'),(2,'Mié'),(3,'Jue'),(4,'Vie'),(5,'Sáb'),(6,'Dom')]
+    ronda = models.ForeignKey(Ronda, on_delete=models.CASCADE, related_name='programaciones')
+    vigilante = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True,
+                                  related_name='programaciones_asignadas')
+    dias_semana = models.JSONField(default=list, help_text='Lista de días: 0=Lun … 6=Dom')
+    hora_inicio = models.TimeField(help_text='Hora en que debe iniciarse la ronda')
+    duracion_minutos = models.PositiveIntegerField(default=60, help_text='Minutos para completarla')
+    activo = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Programación de Ronda'
+        verbose_name_plural = 'Programaciones de Rondas'
+        ordering = ['hora_inicio']
+
+    def __str__(self):
+        dias = ', '.join(dict(self.DIAS)[d] for d in sorted(self.dias_semana))
+        return f'{self.ronda.nombre} — {self.hora_inicio:%H:%M} ({dias})'
+
+
 class EjecucionRonda(models.Model):
     ESTADO_CHOICES = [
         ('en_curso', 'En curso'),
@@ -106,10 +128,14 @@ class EjecucionRonda(models.Model):
     ]
     ronda = models.ForeignKey(Ronda, on_delete=models.CASCADE, related_name='ejecuciones')
     vigilante = models.ForeignKey(User, on_delete=models.CASCADE, related_name='ejecuciones')
+    programacion = models.ForeignKey(ProgramacionRonda, on_delete=models.SET_NULL,
+                                     null=True, blank=True, related_name='ejecuciones')
     fecha_inicio = models.DateTimeField(default=timezone.now)
     fecha_fin = models.DateTimeField(null=True, blank=True)
+    hora_limite = models.DateTimeField(null=True, blank=True, help_text='Vence si no se completa antes de aquí')
     completada = models.BooleanField(default=False)
     estado = models.CharField(max_length=20, choices=ESTADO_CHOICES, default='en_curso')
+    vencida = models.BooleanField(default=False, help_text='True si no se completó antes de hora_limite')
 
     class Meta:
         verbose_name = 'Ejecución de Ronda'

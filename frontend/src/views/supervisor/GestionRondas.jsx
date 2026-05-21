@@ -19,6 +19,166 @@ function SortableItem({ cp }) {
   )
 }
 
+const DIAS_LABELS = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
+
+function ModalProgramaciones({ ronda, vigilantes, onClose }) {
+  const [programaciones, setProgramaciones] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [showNueva, setShowNueva] = useState(false)
+  const [form, setForm] = useState({ dias_semana: [], hora_inicio: '', duracion_minutos: 60, vigilante: '', activo: true })
+  const [guardando, setGuardando] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    api.get(`/programaciones/?ronda=${ronda.id}`)
+      .then(({ data }) => setProgramaciones(data.results || data))
+      .finally(() => setLoading(false))
+  }, [ronda.id])
+
+  const toggleDia = (d) => {
+    setForm((f) => ({
+      ...f,
+      dias_semana: f.dias_semana.includes(d) ? f.dias_semana.filter((x) => x !== d) : [...f.dias_semana, d]
+    }))
+  }
+
+  const guardar = async () => {
+    if (!form.hora_inicio || form.dias_semana.length === 0) {
+      setError('Completá hora y al menos un día'); return
+    }
+    setGuardando(true); setError('')
+    try {
+      const payload = {
+        ronda: ronda.id,
+        dias_semana: form.dias_semana,
+        hora_inicio: form.hora_inicio,
+        duracion_minutos: Number(form.duracion_minutos),
+        vigilante: form.vigilante || null,
+        activo: true,
+      }
+      const { data } = await api.post('/programaciones/', payload)
+      setProgramaciones((prev) => [...prev, data])
+      setShowNueva(false)
+      setForm({ dias_semana: [], hora_inicio: '', duracion_minutos: 60, vigilante: '', activo: true })
+    } catch (e) {
+      setError(e.response?.data?.detail || 'Error al guardar')
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  const eliminar = async (id) => {
+    if (!confirm('¿Eliminar esta programación?')) return
+    await api.delete(`/programaciones/${id}/`)
+    setProgramaciones((prev) => prev.filter((p) => p.id !== id))
+  }
+
+  const toggleActivo = async (prog) => {
+    const { data } = await api.patch(`/programaciones/${prog.id}/`, { activo: !prog.activo })
+    setProgramaciones((prev) => prev.map((p) => p.id === data.id ? data : p))
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
+      <div className="bg-dark-200 rounded-2xl p-6 w-full max-w-lg border border-white/10 max-h-[90vh] overflow-auto">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="font-bold text-white text-lg">Programaciones</h3>
+          <button onClick={onClose} className="text-white/40 hover:text-white text-lg leading-none">✕</button>
+        </div>
+        <p className="text-white/40 text-sm mb-5">{ronda.nombre} · {ronda.instalacion_nombre}</p>
+
+        {loading ? (
+          <div className="flex justify-center py-8">
+            <div className="w-5 h-5 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : (
+          <div className="space-y-2 mb-4">
+            {programaciones.length === 0 && !showNueva && (
+              <p className="text-white/25 text-sm text-center py-4">Sin programaciones aún</p>
+            )}
+            {programaciones.map((prog) => (
+              <div key={prog.id} className={`flex items-start justify-between gap-3 p-3 rounded-xl border ${prog.activo ? 'bg-dark-100 border-white/5' : 'bg-dark-100/50 border-white/5 opacity-50'}`}>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap mb-1">
+                    <span className="text-accent font-mono text-sm font-bold">{prog.hora_inicio?.slice(0,5)}</span>
+                    <span className="text-white/40 text-xs">{prog.duracion_minutos} min</span>
+                    <div className="flex gap-0.5">
+                      {prog.dias_semana.sort((a,b)=>a-b).map((d) => (
+                        <span key={d} className="text-xs bg-accent/15 text-accent px-1.5 py-0.5 rounded">{DIAS_LABELS[d]}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-white/35 text-xs truncate">{prog.vigilante_nombre ?? 'Sin vigilante asignado'}</p>
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button onClick={() => toggleActivo(prog)} className={`text-xs px-2 py-1 rounded-lg transition-colors ${prog.activo ? 'text-white/40 hover:bg-white/5' : 'text-accent/60 hover:bg-accent/10'}`}>
+                    {prog.activo ? 'Pausar' : 'Activar'}
+                  </button>
+                  <button onClick={() => eliminar(prog.id)} className="text-danger/50 hover:text-danger px-2 py-1 rounded-lg hover:bg-danger/10 transition-colors text-xs">
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {showNueva ? (
+          <div className="border border-white/10 rounded-xl p-4 space-y-3 mb-4">
+            <p className="text-white/60 text-sm font-semibold">Nueva programación</p>
+            <div className="flex flex-wrap gap-1.5">
+              {DIAS_LABELS.map((label, i) => (
+                <button
+                  key={i}
+                  onClick={() => toggleDia(i)}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors
+                    ${form.dias_semana.includes(i) ? 'bg-accent text-dark-500 font-bold' : 'bg-dark-100 text-white/50 hover:text-white'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-white/40 text-xs block mb-1">Hora inicio</label>
+                <input type="time" className="input-field" value={form.hora_inicio} onChange={(e) => setForm({ ...form, hora_inicio: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-white/40 text-xs block mb-1">Duración (min)</label>
+                <input type="number" min="5" max="480" className="input-field" value={form.duracion_minutos} onChange={(e) => setForm({ ...form, duracion_minutos: e.target.value })} />
+              </div>
+            </div>
+            <div>
+              <label className="text-white/40 text-xs block mb-1">Vigilante asignado</label>
+              <select className="input-field" value={form.vigilante} onChange={(e) => setForm({ ...form, vigilante: e.target.value })}>
+                <option value="">Sin asignar (manual)</option>
+                {vigilantes.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.first_name ? `${v.first_name} ${v.last_name || ''}`.trim() : v.username}
+                  </option>
+                ))}
+              </select>
+            </div>
+            {error && <p className="text-danger text-xs">{error}</p>}
+            <div className="flex gap-2">
+              <button onClick={() => { setShowNueva(false); setError('') }} className="btn-ghost flex-1 text-sm py-2">Cancelar</button>
+              <button onClick={guardar} disabled={guardando} className="btn-primary flex-1 text-sm py-2 disabled:opacity-50">
+                {guardando ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={() => setShowNueva(true)} className="w-full py-2.5 border border-dashed border-white/15 rounded-xl text-white/40 hover:text-accent hover:border-accent/40 text-sm transition-colors">
+            + Nueva programación
+          </button>
+        )}
+
+        <button onClick={onClose} className="btn-ghost w-full mt-3 text-sm">Cerrar</button>
+      </div>
+    </div>
+  )
+}
+
 export default function GestionRondas() {
   const [rondas, setRondas] = useState([])
   const [instalaciones, setInstalaciones] = useState([])
@@ -35,6 +195,8 @@ export default function GestionRondas() {
   const [vigilanteSeleccionado, setVigilanteSeleccionado] = useState('')
   const [guardandoAsig, setGuardandoAsig] = useState(false)
   const [errorAsig, setErrorAsig] = useState('')
+  // Programaciones
+  const [programandoRonda, setProgramandoRonda] = useState(null)
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -161,6 +323,9 @@ export default function GestionRondas() {
                 <p className="text-white/40 text-sm">{ronda.instalacion_nombre} · {ronda.checkpoints_count} checkpoints</p>
               </div>
               <div className="flex gap-2 shrink-0">
+                <button onClick={() => setProgramandoRonda(ronda)} className="text-sm text-white/40 hover:text-white px-3 py-1.5 rounded-lg hover:bg-white/5 transition-colors">
+                  🕐 Programar
+                </button>
                 <button onClick={() => abrirAsignar(ronda)} className="text-sm text-accent/80 hover:text-accent px-3 py-1.5 rounded-lg hover:bg-accent/10 transition-colors font-medium">
                   Asignar →
                 </button>
@@ -212,6 +377,15 @@ export default function GestionRondas() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal programaciones */}
+      {programandoRonda && (
+        <ModalProgramaciones
+          ronda={programandoRonda}
+          vigilantes={vigilantes}
+          onClose={() => setProgramandoRonda(null)}
+        />
       )}
 
       {/* Modal crear/editar ronda */}

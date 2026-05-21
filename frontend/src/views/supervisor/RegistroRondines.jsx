@@ -103,7 +103,15 @@ export default function RegistroRondines() {
                     {e.fecha_fin ? format(new Date(e.fecha_fin), 'dd/MM/yy HH:mm', { locale: es }) : '—'}
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`badge-${e.estado}`}>{e.estado.replace('_', ' ')}</span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className={`badge-${e.estado}`}>{e.estado.replace('_', ' ')}</span>
+                      {e.vencida && <span className="text-xs bg-danger/15 text-danger px-1.5 py-0.5 rounded font-medium">vencida</span>}
+                    </div>
+                    {e.hora_limite && e.estado === 'en_curso' && (
+                      <p className="text-white/30 text-xs mt-0.5">
+                        límite {format(new Date(e.hora_limite), 'HH:mm', { locale: es })}
+                      </p>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
@@ -138,7 +146,10 @@ export default function RegistroRondines() {
                 <h3 className="font-bold text-white text-lg">{detalle.ronda_nombre}</h3>
                 <p className="text-white/40 text-sm">{detalle.vigilante_nombre} · {detalle.instalacion_nombre}</p>
               </div>
-              <span className={`badge-${detalle.estado}`}>{detalle.estado.replace('_', ' ')}</span>
+              <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                <span className={`badge-${detalle.estado}`}>{detalle.estado.replace('_', ' ')}</span>
+                {detalle.vencida && <span className="text-xs bg-danger/15 text-danger px-1.5 py-0.5 rounded font-medium">vencida</span>}
+              </div>
             </div>
             <div className="space-y-2">
               {(detalle.scans || []).map((scan, i) => (

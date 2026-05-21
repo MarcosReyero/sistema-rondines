@@ -28,6 +28,11 @@ urlpatterns = [
     path('rondas/', views.RondaListCreateView.as_view(), name='rondas'),
     path('rondas/<int:pk>/', views.RondaDetailView.as_view(), name='ronda_detail'),
 
+    # Programaciones
+    path('programaciones/', views.ProgramacionListCreateView.as_view(), name='programaciones'),
+    path('programaciones/<int:pk>/', views.ProgramacionDetailView.as_view(), name='programacion_detail'),
+    path('programaciones/verificar/', views.verificar_programaciones, name='verificar_programaciones'),
+
     # Ejecuciones
     path('ejecuciones/', views.EjecucionListCreateView.as_view(), name='ejecuciones'),
     path('ejecuciones/<int:pk>/', views.EjecucionDetailView.as_view(), name='ejecucion_detail'),

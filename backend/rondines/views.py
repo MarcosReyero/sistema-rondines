@@ -2,12 +2,14 @@ import io
 import base64
 import zipfile
 import uuid as uuid_lib
+import datetime
 from datetime import timedelta
 
 import qrcode
 from django.conf import settings
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.utils.timezone import make_aware
 from django.db.models import Q
 from rest_framework import generics, status, permissions
 from rest_framework.decorators import api_view, permission_classes
@@ -20,13 +22,13 @@ from asgiref.sync import async_to_sync
 
 from .models import (
     Perfil, Instalacion, Checkpoint, Ronda, RondaCheckpointOrden,
-    EjecucionRonda, CheckpointScan
+    EjecucionRonda, CheckpointScan, ProgramacionRonda
 )
 from .serializers import (
     UserSerializer, UserCreateSerializer, InstalacionSerializer,
     InstalacionListSerializer, CheckpointSerializer, RondaSerializer,
     RondaCreateSerializer, EjecucionRondaSerializer, EjecucionRondaListSerializer,
-    CheckpointScanSerializer, ScanOfflineSerializer
+    CheckpointScanSerializer, ScanOfflineSerializer, ProgramacionRondaSerializer
 )
 
 
@@ -271,6 +273,111 @@ class RondaDetailView(generics.RetrieveUpdateDestroyAPIView):
         instance.activo = False
         instance.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# ─── Programaciones ──────────────────────────────────────────────────────────
+
+class ProgramacionListCreateView(generics.ListCreateAPIView):
+    serializer_class = ProgramacionRondaSerializer
+    permission_classes = [IsSupervisor]
+
+    def get_queryset(self):
+        qs = ProgramacionRonda.objects.select_related('ronda', 'ronda__instalacion', 'vigilante')
+        ronda_id = self.request.query_params.get('ronda')
+        if ronda_id:
+            qs = qs.filter(ronda_id=ronda_id)
+        activo = self.request.query_params.get('activo')
+        if activo is not None:
+            qs = qs.filter(activo=activo.lower() == 'true')
+        return qs
+
+
+class ProgramacionDetailView(generics.RetrieveUpdateDestroyAPIView):
+    queryset = ProgramacionRonda.objects.all()
+    serializer_class = ProgramacionRondaSerializer
+    permission_classes = [IsSupervisor]
+
+
+@api_view(['POST'])
+@permission_classes([IsSupervisor])
+def verificar_programaciones(request):
+    """
+    Crea ejecuciones para programaciones que deben iniciar ahora
+    y marca como vencidas las ejecuciones en_curso cuyo hora_limite pasó.
+    Debe llamarse periódicamente (ej. cada minuto desde el frontend o cron).
+    """
+    ahora = timezone.now()
+    hoy = ahora.weekday()  # 0=Lun … 6=Dom
+    creadas = []
+    vencidas = []
+
+    # 1. Marcar ejecuciones vencidas
+    vencidas_qs = EjecucionRonda.objects.filter(
+        estado='en_curso',
+        hora_limite__lt=ahora,
+        vencida=False
+    )
+    for ej in vencidas_qs:
+        ej.vencida = True
+        ej.estado = 'incompleta'
+        ej.fecha_fin = ahora
+        ej.save()
+        vencidas.append(ej.id)
+        _notify_ws('ronda_vencida', {
+            'ejecucion_id': ej.id,
+            'ronda': ej.ronda.nombre,
+            'vigilante': ej.vigilante.get_full_name() or ej.vigilante.username,
+        })
+
+    # 2. Crear ejecuciones para programaciones activas del día cuya hora llegó
+    programaciones = ProgramacionRonda.objects.filter(
+        activo=True
+    ).select_related('ronda', 'ronda__instalacion', 'vigilante')
+
+    for prog in programaciones:
+        if hoy not in prog.dias_semana:
+            continue
+
+        # Construir la hora_inicio de hoy en timezone-aware
+        inicio_hoy = make_aware(
+            datetime.datetime.combine(ahora.date(), prog.hora_inicio)
+        )
+        hora_limite = inicio_hoy + timedelta(minutes=prog.duracion_minutos)
+
+        # Solo crear si la ventana de la programación está activa (iniciada pero no vencida)
+        if ahora < inicio_hoy or ahora > hora_limite:
+            continue
+
+        # Vigilante: el asignado en la programación o saltar si no hay
+        vigilante = prog.vigilante
+        if not vigilante:
+            continue
+
+        # No crear si ya existe una ejecución para esta programación hoy
+        ya_existe = EjecucionRonda.objects.filter(
+            programacion=prog,
+            fecha_inicio__date=ahora.date()
+        ).exists()
+        if ya_existe:
+            continue
+
+        ej = EjecucionRonda.objects.create(
+            ronda=prog.ronda,
+            vigilante=vigilante,
+            programacion=prog,
+            hora_limite=hora_limite,
+            estado='en_curso',
+        )
+        creadas.append(ej.id)
+        _notify_ws('ronda_iniciada', {
+            'ejecucion_id': ej.id,
+            'ronda': prog.ronda.nombre,
+            'vigilante': vigilante.get_full_name() or vigilante.username,
+            'instalacion': prog.ronda.instalacion.nombre,
+            'programada': True,
+        })
+
+    return Response({'creadas': creadas, 'vencidas': vencidas})
 
 
 # ─── Ejecuciones ─────────────────────────────────────────────────────────────

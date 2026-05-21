@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 from rest_framework import serializers
 from .models import (
     Perfil, Instalacion, Checkpoint, Ronda, RondaCheckpointOrden,
-    EjecucionRonda, CheckpointScan
+    EjecucionRonda, CheckpointScan, ProgramacionRonda
 )
 
 
@@ -162,6 +162,26 @@ class CheckpointScanSerializer(serializers.ModelSerializer):
         return obj.ejecucion.vigilante.get_full_name() or obj.ejecucion.vigilante.username
 
 
+class ProgramacionRondaSerializer(serializers.ModelSerializer):
+    ronda_nombre = serializers.CharField(source='ronda.nombre', read_only=True)
+    instalacion_nombre = serializers.CharField(source='ronda.instalacion.nombre', read_only=True)
+    vigilante_nombre = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ProgramacionRonda
+        fields = [
+            'id', 'ronda', 'ronda_nombre', 'instalacion_nombre',
+            'vigilante', 'vigilante_nombre',
+            'dias_semana', 'hora_inicio', 'duracion_minutos', 'activo', 'created_at',
+        ]
+        read_only_fields = ['created_at']
+
+    def get_vigilante_nombre(self, obj):
+        if obj.vigilante:
+            return obj.vigilante.get_full_name() or obj.vigilante.username
+        return None
+
+
 class EjecucionRondaSerializer(serializers.ModelSerializer):
     ronda_nombre = serializers.CharField(source='ronda.nombre', read_only=True)
     instalacion_nombre = serializers.CharField(source='ronda.instalacion.nombre', read_only=True)
@@ -173,10 +193,11 @@ class EjecucionRondaSerializer(serializers.ModelSerializer):
         model = EjecucionRonda
         fields = [
             'id', 'ronda', 'ronda_nombre', 'instalacion_nombre',
-            'vigilante', 'vigilante_nombre', 'fecha_inicio', 'fecha_fin',
-            'completada', 'estado', 'scans', 'progreso'
+            'vigilante', 'vigilante_nombre', 'programacion',
+            'fecha_inicio', 'fecha_fin', 'hora_limite',
+            'completada', 'estado', 'vencida', 'scans', 'progreso'
         ]
-        read_only_fields = ['vigilante', 'fecha_inicio', 'completada', 'estado']
+        read_only_fields = ['vigilante', 'fecha_inicio', 'completada', 'estado', 'vencida']
 
     def get_vigilante_nombre(self, obj):
         return obj.vigilante.get_full_name() or obj.vigilante.username
@@ -195,8 +216,9 @@ class EjecucionRondaListSerializer(serializers.ModelSerializer):
         model = EjecucionRonda
         fields = [
             'id', 'ronda', 'ronda_nombre', 'instalacion_nombre',
-            'vigilante', 'vigilante_nombre', 'fecha_inicio', 'fecha_fin',
-            'completada', 'estado', 'progreso'
+            'vigilante', 'vigilante_nombre', 'programacion',
+            'fecha_inicio', 'fecha_fin', 'hora_limite',
+            'completada', 'estado', 'vencida', 'progreso'
         ]
 
     def get_vigilante_nombre(self, obj):
