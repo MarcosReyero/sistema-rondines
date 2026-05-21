@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../../lib/api'
-import QRScannerModal from '../../components/QRScannerModal'
 
 const TIPO_CONFIG = {
   observacion: { icon: '✓', color: 'text-accent', bg: 'bg-accent/15', label: 'OK' },
@@ -16,7 +15,6 @@ export default function EjecucionRonda() {
   const [loading, setLoading] = useState(true)
   const [finalizando, setFinalizando] = useState(false)
   const [confirmarFin, setConfirmarFin] = useState(false)
-  const [scannerAbierto, setScannerAbierto] = useState(false)
 
   const cargar = useCallback(() => {
     api.get(`/ejecuciones/${id}/`)
@@ -153,7 +151,7 @@ export default function EjecucionRonda() {
       <div className="px-4 pb-safe-bottom pt-3 border-t border-white/5 bg-dark-300 space-y-2">
         {estado === 'en_curso' && (
           <button
-            onClick={() => setScannerAbierto(true)}
+            onClick={() => navigate('/scan')}
             className="w-full py-4 rounded-2xl font-bold text-base bg-accent text-dark-500 active:scale-[0.98] transition-transform flex items-center justify-center gap-2"
           >
             <span className="text-xl">⬛</span> Escanear QR
@@ -177,17 +175,6 @@ export default function EjecucionRonda() {
           </div>
         )}
       </div>
-
-      {/* Scanner QR */}
-      {scannerAbierto && (
-        <QRScannerModal
-          onScan={(uuid) => {
-            setScannerAbierto(false)
-            navigate(`/check/${uuid}`)
-          }}
-          onClose={() => setScannerAbierto(false)}
-        />
-      )}
 
       {/* Modal confirmación finalizar */}
       {confirmarFin && (

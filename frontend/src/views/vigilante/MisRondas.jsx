@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import api from '../../lib/api'
 import { getUser, logout } from '../../lib/auth'
 import { useOfflineSync } from '../../hooks/useOfflineSync'
-import QRScannerModal from '../../components/QRScannerModal'
 
 export default function MisRondas() {
   const navigate = useNavigate()
@@ -11,7 +10,6 @@ export default function MisRondas() {
   const [ejecucion, setEjecucion] = useState(null)   // ronda activa asignada
   const [loading, setLoading] = useState(true)
   const [online, setOnline] = useState(navigator.onLine)
-  const [scannerAbierto, setScannerAbierto] = useState(false)
   useOfflineSync()
 
   useEffect(() => {
@@ -141,7 +139,7 @@ export default function MisRondas() {
             {/* Botón escanear — siempre visible */}
             <div className="mt-auto">
               <button
-                onClick={() => setScannerAbierto(true)}
+                onClick={() => navigate('/scan')}
                 className="w-full py-5 rounded-2xl font-bold text-xl bg-accent text-dark-500 active:scale-[0.98] transition-transform flex items-center justify-center gap-3 shadow-lg"
                 style={{ boxShadow: '0 0 24px #00d4aa44' }}
               >
@@ -158,16 +156,6 @@ export default function MisRondas() {
         )}
       </div>
 
-      {/* Scanner */}
-      {scannerAbierto && (
-        <QRScannerModal
-          onScan={(uuid) => {
-            setScannerAbierto(false)
-            navigate(`/check/${uuid}`)
-          }}
-          onClose={() => setScannerAbierto(false)}
-        />
-      )}
     </div>
   )
 }

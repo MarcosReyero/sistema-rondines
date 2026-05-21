@@ -6,6 +6,7 @@ import Login from './views/vigilante/Login'
 import MisRondas from './views/vigilante/MisRondas'
 import EjecucionRonda from './views/vigilante/EjecucionRonda'
 import ScanCheckpoint from './views/vigilante/ScanCheckpoint'
+import QRScannerPage from './views/vigilante/QRScannerPage'
 
 import SupervisorLayout from './views/supervisor/SupervisorLayout'
 import Dashboard from './views/supervisor/Dashboard'
@@ -34,6 +35,7 @@ export default function App() {
 
         {/* Vigilante */}
         <Route path="/rondas" element={<RequireAuth><MisRondas /></RequireAuth>} />
+        <Route path="/scan" element={<RequireAuth><QRScannerPage /></RequireAuth>} />
         <Route path="/ejecucion/:id" element={<RequireAuth><EjecucionRonda /></RequireAuth>} />
         <Route path="/check/:uuid" element={<RequireAuth><ScanCheckpoint /></RequireAuth>} />
 
