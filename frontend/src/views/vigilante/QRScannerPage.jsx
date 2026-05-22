@@ -25,9 +25,21 @@ export default function QRScannerPage() {
   const [notaError, setNotaError] = useState(false)
   const [resultado, setResultado] = useState(null)
   const [uuidActual, setUuidActual] = useState(null)
+  const [torchActivo, setTorchActivo] = useState(false)
   const qrRef = useRef(null)
   const detectadoRef = useRef(false)
   const notaRef = useRef(null)
+
+  const toggleLinterna = async () => {
+    try {
+      const video = document.querySelector(`#${READER_ID} video`)
+      if (!video?.srcObject) return
+      const track = video.srcObject.getVideoTracks()[0]
+      if (!track) return
+      await track.applyConstraints({ advanced: [{ torch: !torchActivo }] })
+      setTorchActivo((v) => !v)
+    } catch (_) {}
+  }
 
   const detenerCamara = () => {
     try {
@@ -232,13 +244,23 @@ export default function QRScannerPage() {
           </div>
         </div>
 
-        {/* Footer instruction */}
+        {/* Footer instruction + torch */}
         {fase === 'escaneando' && (
           <div
-            className="shrink-0 px-6 py-5 text-center"
+            className="shrink-0 px-6 py-5 flex flex-col items-center gap-3"
             style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)' }}
           >
             <p className="text-white/40 text-sm">Acercá el teléfono al código QR del checkpoint</p>
+            <button
+              onClick={toggleLinterna}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border active:scale-95 transition-all
+                ${torchActivo
+                  ? 'bg-yellow-400/15 text-yellow-300 border-yellow-400/40'
+                  : 'bg-white/8 text-white/40 border-white/10'}`}
+            >
+              <span>🔦</span>
+              <span>{torchActivo ? 'Linterna encendida' : 'Linterna'}</span>
+            </button>
           </div>
         )}
       </div>
