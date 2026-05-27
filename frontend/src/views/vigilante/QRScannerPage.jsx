@@ -221,6 +221,22 @@ export default function QRScannerPage() {
           {/* html5-qrcode injects video here */}
           <div id={READER_ID} className="absolute inset-0" />
 
+          {/* Torch button — floating bottom-right, above viewfinder */}
+          {fase === 'escaneando' && (
+            <button
+              onClick={toggleLinterna}
+              className={`absolute bottom-5 right-5 z-20 w-14 h-14 rounded-2xl flex flex-col items-center justify-center gap-0.5 border-2 transition-all active:scale-90 shadow-lg
+                ${torchActivo
+                  ? 'bg-yellow-400/25 border-yellow-400/60 text-yellow-300'
+                  : 'bg-black/70 border-white/30 text-white/80'}`}
+            >
+              <span className="text-2xl leading-none">🔦</span>
+              <span className="text-[9px] font-bold uppercase tracking-wide opacity-80">
+                {torchActivo ? 'ON' : 'OFF'}
+              </span>
+            </button>
+          )}
+
           {/* Custom viewfinder — corners + scan line */}
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-10">
             <div
@@ -244,23 +260,13 @@ export default function QRScannerPage() {
           </div>
         </div>
 
-        {/* Footer instruction + torch */}
+        {/* Footer instruction */}
         {fase === 'escaneando' && (
           <div
-            className="shrink-0 px-6 py-5 flex flex-col items-center gap-3"
+            className="shrink-0 px-6 py-5 text-center"
             style={{ background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, transparent 100%)' }}
           >
             <p className="text-white/40 text-sm">Acercá el teléfono al código QR del checkpoint</p>
-            <button
-              onClick={toggleLinterna}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium border active:scale-95 transition-all
-                ${torchActivo
-                  ? 'bg-yellow-400/15 text-yellow-300 border-yellow-400/40'
-                  : 'bg-white/8 text-white/40 border-white/10'}`}
-            >
-              <span>🔦</span>
-              <span>{torchActivo ? 'Linterna encendida' : 'Linterna'}</span>
-            </button>
           </div>
         )}
       </div>

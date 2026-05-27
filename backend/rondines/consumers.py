@@ -1,11 +1,25 @@
 import json
+from urllib.parse import parse_qs
 from channels.generic.websocket import AsyncWebsocketConsumer
+from rest_framework_simplejwt.tokens import AccessToken
+from django.contrib.auth import get_user_model
 
 
 class RondinConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        user = self.scope.get('user')
-        if not user or not user.is_authenticated:
+        # Browsers can't set custom headers on WebSocket — validate JWT from query string
+        query = parse_qs(self.scope['query_string'].decode())
+        token_str = query.get('token', [None])[0]
+        if not token_str:
+            await self.close()
+            return
+        try:
+            decoded = AccessToken(token_str)
+            User = get_user_model()
+            user = await User.objects.aget(id=decoded['user_id'])
+            if not user.is_active:
+                raise ValueError('inactive')
+        except Exception:
             await self.close()
             return
 
