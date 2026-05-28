@@ -1,12 +1,18 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { login, isSupervisor } from '../../lib/auth'
+import { login, isSupervisor, isAuthenticated } from '../../lib/auth'
 
 export default function Login() {
   const navigate = useNavigate()
   const [form, setForm] = useState({ username: '', password: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (isAuthenticated()) {
+      navigate(isSupervisor() ? '/supervisor' : '/rondas', { replace: true })
+    }
+  }, [navigate])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
