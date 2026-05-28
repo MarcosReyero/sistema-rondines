@@ -26,4 +26,4 @@ RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "echo '=== migrate ===' && python manage.py migrate --noinput && echo '=== superuser ===' && python create_superuser.py && echo '=== PORT='$PORT' ===' && exec daphne -b 0.0.0.0 -p ${PORT:-8000} config.asgi:application"]
+CMD ["sh", "/app/start.sh"]

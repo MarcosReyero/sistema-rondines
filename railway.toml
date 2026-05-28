@@ -3,4 +3,5 @@ dockerfilePath = "Dockerfile"
 
 [deploy]
 startCommand = "sh /app/start.sh"
-healthcheckTimeout = 300
+healthcheckPath = "/admin/login/"
+healthcheckTimeout = 120
