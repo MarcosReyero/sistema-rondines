@@ -2,6 +2,5 @@
 dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "echo '=== migrate ===' && python manage.py migrate --noinput && echo '=== superuser ===' && python create_superuser.py && echo '=== daphne en puerto '${PORT:-8000}' ===' && exec daphne -b 0.0.0.0 -p ${PORT:-8000} config.asgi:application"
-healthcheckPath = "/admin/login/"
-healthcheckTimeout = 120
+startCommand = "sh /app/start.sh"
+healthcheckTimeout = 300
