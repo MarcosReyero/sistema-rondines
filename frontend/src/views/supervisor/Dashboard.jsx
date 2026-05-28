@@ -162,7 +162,7 @@ export default function Dashboard() {
     <div className="flex flex-col h-full overflow-hidden">
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <div className="shrink-0 px-6 py-3 border-b border-white/5 bg-dark-400 flex items-center gap-4">
+      <div className="shrink-0 px-3 md:px-6 py-3 border-b border-white/5 bg-dark-400 flex items-center gap-2 md:gap-4">
         <div className="flex items-center gap-2">
           <h1 className="text-white font-bold text-base">Monitoreo en tiempo real</h1>
           <span className={`flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full
@@ -202,10 +202,10 @@ export default function Dashboard() {
       </div>
 
       {/* ── Cuerpo: mapa + panel ───────────────────────────────────────────── */}
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
 
         {/* Mapa */}
-        <div className="flex-1 p-4 overflow-hidden flex flex-col gap-3">
+        <div className="flex-1 min-h-0 p-3 md:p-4 overflow-hidden flex flex-col gap-3">
           {/* Sub-header del mapa */}
           <div className="flex items-center justify-between gap-3 shrink-0">
             <div>
@@ -258,7 +258,7 @@ export default function Dashboard() {
         </div>
 
         {/* ── Panel lateral ──────────────────────────────────────────────── */}
-        <div className="w-72 shrink-0 border-l border-white/5 flex flex-col overflow-hidden bg-dark-400">
+        <div className="h-64 md:h-auto md:w-72 shrink-0 border-t md:border-t-0 md:border-l border-white/5 flex flex-col overflow-hidden bg-dark-400">
 
           {/* Rondas activas */}
           <div className="shrink-0 px-4 pt-4 pb-2">

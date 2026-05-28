@@ -301,7 +301,7 @@ export default function GestionRondas() {
   }
 
   return (
-    <div className="p-6 h-full overflow-auto">
+    <div className="p-4 md:p-6 h-full overflow-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-white">Gestión de Rondas</h1>
         <button onClick={abrirNuevo} className="btn-primary text-sm">+ Nueva Ronda</button>
@@ -314,7 +314,7 @@ export default function GestionRondas() {
       ) : (
         <div className="space-y-3">
           {rondas.map((ronda) => (
-            <div key={ronda.id} className="card flex items-center justify-between gap-4">
+            <div key={ronda.id} className="card flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <div className="flex items-center gap-2 mb-0.5">
                   <h3 className="font-semibold text-white">{ronda.nombre}</h3>
@@ -322,7 +322,7 @@ export default function GestionRondas() {
                 </div>
                 <p className="text-white/40 text-sm">{ronda.instalacion_nombre} · {ronda.checkpoints_count} checkpoints</p>
               </div>
-              <div className="flex gap-2 shrink-0">
+              <div className="flex flex-wrap gap-2 shrink-0">
                 <button onClick={() => setProgramandoRonda(ronda)} className="text-sm text-white/40 hover:text-white px-3 py-1.5 rounded-lg hover:bg-white/5 transition-colors">
                   🕐 Programar
                 </button>
@@ -417,7 +417,7 @@ export default function GestionRondas() {
 
             {/* Selector checkpoints */}
             {form.instalacion && (
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <p className="text-white/50 text-sm mb-2">Checkpoints disponibles</p>
                   <div className="space-y-1.5 max-h-48 overflow-auto">

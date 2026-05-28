@@ -48,7 +48,7 @@ export default function RegistroRondines() {
   const colorEstado = { completada: 'text-accent', en_curso: 'text-blue-400', incompleta: 'text-warning' }
 
   return (
-    <div className="p-6 h-full overflow-auto">
+    <div className="p-4 md:p-6 h-full overflow-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-white">Registro de Rondines</h1>
         <button onClick={exportarExcel} disabled={exportando} className="btn-ghost text-sm">

@@ -57,7 +57,7 @@ export default function GestionQR() {
   }
 
   return (
-    <div className="p-6 h-full overflow-auto">
+    <div className="p-4 md:p-6 h-full overflow-auto">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-white">Gestión de QR</h1>
         {instSeleccionada && (
@@ -67,16 +67,16 @@ export default function GestionQR() {
         )}
       </div>
 
-      <div className="grid grid-cols-4 gap-6">
+      <div className="flex flex-col md:grid md:grid-cols-4 gap-4 md:gap-6">
         {/* Lista instalaciones */}
-        <div className="col-span-1">
+        <div className="md:col-span-1">
           <h2 className="text-white/50 text-xs uppercase tracking-wider mb-3">Instalaciones</h2>
-          <div className="space-y-1">
+          <div className="flex gap-2 overflow-x-auto pb-1 md:flex-col md:gap-0 md:space-y-1 md:pb-0 md:overflow-visible">
             {instalaciones.map((inst) => (
               <button
                 key={inst.id}
                 onClick={() => cargarCheckpoints(inst)}
-                className={`w-full text-left px-3 py-2.5 rounded-xl text-sm transition-colors ${
+                className={`shrink-0 md:w-full text-left px-3 py-2 md:py-2.5 rounded-xl text-sm transition-colors whitespace-nowrap md:whitespace-normal ${
                   instSeleccionada?.id === inst.id
                     ? 'bg-accent/10 text-accent'
                     : 'text-white/60 hover:bg-white/5 hover:text-white'
@@ -89,7 +89,7 @@ export default function GestionQR() {
         </div>
 
         {/* Grid checkpoints */}
-        <div className="col-span-3">
+        <div className="md:col-span-3">
           {!instSeleccionada ? (
             <div className="text-white/30 text-center py-16">Seleccioná una instalación</div>
           ) : loading ? (
@@ -97,7 +97,7 @@ export default function GestionQR() {
               <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
             </div>
           ) : (
-            <div className="grid grid-cols-2 xl:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {checkpoints.map((cp) => (
                 <div key={cp.id} className="card">
                   <div className="flex items-start justify-between mb-3">
