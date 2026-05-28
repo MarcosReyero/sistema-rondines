@@ -21,6 +21,7 @@ COPY --from=frontend-builder /frontend/dist ./frontend_dist/
 
 ENV SECRET_KEY=clave-temporal-solo-para-build
 ENV DJANGO_SETTINGS_MODULE=config.settings
+ENV PYTHONUNBUFFERED=1
 RUN python manage.py collectstatic --noinput
 
 EXPOSE 8000
