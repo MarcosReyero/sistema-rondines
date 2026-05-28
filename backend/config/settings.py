@@ -120,6 +120,9 @@ CORS_ALLOWED_ORIGINS = os.environ.get(
     'CORS_ALLOWED_ORIGINS',
     'http://localhost:5173,http://localhost:3000'
 ).split(',')
+
+# Orígenes del APK de Capacitor — solo nuestro propio app puede usar estos
+CORS_ALLOWED_ORIGINS += ['capacitor://localhost', 'https://localhost', 'http://localhost']
 CORS_ALLOW_CREDENTIALS = True
 
 REST_FRAMEWORK = {

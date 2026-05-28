@@ -1,5 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 
+const WS_BASE = import.meta.env.VITE_WS_URL || null
+
 export function useWebSocket(onMessage) {
   const wsRef = useRef(null)
   const reconnectTimer = useRef(null)
@@ -11,9 +13,16 @@ export function useWebSocket(onMessage) {
     const token = localStorage.getItem('access_token')
     if (!token) return
 
-    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
-    const host = window.location.host
-    const ws = new WebSocket(`${protocol}://${host}/ws/rondines/?token=${encodeURIComponent(token)}`)
+    let wsUrl
+    if (WS_BASE) {
+      wsUrl = `${WS_BASE}?token=${encodeURIComponent(token)}`
+    } else {
+      const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
+      const host = window.location.host
+      wsUrl = `${protocol}://${host}/ws/rondines/?token=${encodeURIComponent(token)}`
+    }
+
+    const ws = new WebSocket(wsUrl)
     wsRef.current = ws
 
     ws.onopen = () => {
