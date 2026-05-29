@@ -51,11 +51,13 @@ Write-Host "[3/5] APK OK" -ForegroundColor Green
 Write-Host "[4/5] Publicando GitHub Release..." -ForegroundColor Yellow
 Set-Location $ROOT
 $TAG = "v$Version"
+# Si ya existe un release con ese tag, lo borra antes de recrear
+gh release delete $TAG --yes --repo $REPO 2>$null
 gh release create $TAG $APK_PATH `
     --title "Rondines $TAG" `
     --notes "Release automatico $TAG" `
     --repo $REPO 2>&1
-if ($LASTEXITCODE -ne 0) { Write-Host "ERROR en gh release (¿corriste 'gh auth login'?)" -ForegroundColor Red; exit 1 }
+if ($LASTEXITCODE -ne 0) { Write-Host "ERROR en gh release (ejecuta 'gh auth login' si es la primera vez)" -ForegroundColor Red; exit 1 }
 $DOWNLOAD_URL = "https://github.com/$REPO/releases/download/$TAG/app-debug.apk"
 Write-Host "[4/5] Release publicado en GitHub" -ForegroundColor Green
 
