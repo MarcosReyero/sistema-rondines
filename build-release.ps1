@@ -29,8 +29,8 @@ Write-Host "  $current  →  $Version" -ForegroundColor White
 Write-Host ""
 
 # ── 2. Actualizar version en package.json ───────────────────────────────────
-$pkgContent = $pkgContent -replace '"version":\s*"[^"]+"', '"version": "' + $Version + '"'
-[System.IO.File]::WriteAllText("$FRONTEND\package.json", $pkgContent)
+$pkgContent = $pkgContent -replace '"version":\s*"[^"]+"', ('"version": "' + $Version + '"')
+$pkgContent | Set-Content "$FRONTEND\package.json" -Encoding utf8 -NoNewline
 Write-Host "[1/5] Version actualizada en package.json" -ForegroundColor Green
 
 # ── 3. Build frontend + sync Android ───────────────────────────────────────
