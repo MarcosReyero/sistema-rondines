@@ -8,7 +8,7 @@ export function useAppUpdate() {
 
   useEffect(() => {
     axios.get(`${API_BASE}/version/`).then(({ data }) => {
-      const instalada = __APP_VERSION__
+      const instalada = import.meta.env.VITE_APP_VERSION || '0.0.0'
       if (data.version && data.version !== instalada && data.download_url) {
         setUpdate(data)
       }
