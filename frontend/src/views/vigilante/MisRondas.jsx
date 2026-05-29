@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import api from '../../lib/api'
 import { getUser, logout } from '../../lib/auth'
 import { getScansPendientes, cachearEjecucionActiva, getEjecucionCacheada } from '../../lib/db'
+import { useAppUpdate } from '../../hooks/useAppUpdate'
 
 export default function MisRondas() {
   const navigate = useNavigate()
@@ -53,6 +54,8 @@ export default function MisRondas() {
     return () => window.removeEventListener('focus', onFocus)
   }, [cargar])
 
+  const update = useAppUpdate()
+
   const handleLogout = () => { logout(); navigate('/login') }
 
   const nombreUsuario = user?.first_name
@@ -90,6 +93,24 @@ export default function MisRondas() {
       </div>
 
       <div className="flex-1 px-4 py-6 flex flex-col gap-5">
+        {/* Banner de actualización */}
+        {update && (
+          <div className="bg-accent/10 border border-accent/30 rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-accent text-sm font-semibold">Nueva versión disponible</p>
+              <p className="text-white/50 text-xs">v{update.version} — tocá para actualizar</p>
+            </div>
+            <a
+              href={update.download_url}
+              target="_blank"
+              rel="noreferrer"
+              className="shrink-0 bg-accent text-dark-500 font-bold text-sm px-4 py-2 rounded-xl active:scale-95 transition-transform"
+            >
+              Actualizar
+            </a>
+          </div>
+        )}
+
         {/* Banner sin conexión */}
         {!online && (
           <div className="bg-warning/10 border border-warning/30 rounded-2xl px-4 py-3 flex items-start gap-2.5">

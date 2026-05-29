@@ -746,6 +746,17 @@ def exportar_ejecuciones_excel(request):
     return response
 
 
+# ─── Versión del APK ─────────────────────────────────────────────────────────
+
+@api_view(['GET'])
+@permission_classes([permissions.AllowAny])
+def app_version(request):
+    return Response({
+        'version': settings.APP_VERSION,
+        'download_url': settings.APK_DOWNLOAD_URL,
+    })
+
+
 # ─── Helper WebSocket notify ─────────────────────────────────────────────────
 
 def _notify_ws(event_type, data):

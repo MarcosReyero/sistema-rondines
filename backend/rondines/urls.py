@@ -55,4 +55,7 @@ urlpatterns = [
 
     # Exportación
     path('exportar/excel/', views.exportar_ejecuciones_excel, name='exportar_excel'),
+
+    # Versión APK
+    path('version/', views.app_version, name='app_version'),
 ]

@@ -147,6 +147,10 @@ SIMPLE_JWT = {
 # Tiempo máximo en horas antes de marcar una ejecución como incompleta
 RONDA_MAX_HOURS = int(os.environ.get('RONDA_MAX_HOURS', '12'))
 
+# Versión del APK y URL de descarga (actualizar al hacer release)
+APP_VERSION = os.environ.get('APP_VERSION', '1.0.0')
+APK_DOWNLOAD_URL = os.environ.get('APK_DOWNLOAD_URL', '')
+
 # URL del frontend para generación de QR
 FRONTEND_URL = os.environ.get('FRONTEND_URL', 'https://tu-dominio.railway.app')
 
