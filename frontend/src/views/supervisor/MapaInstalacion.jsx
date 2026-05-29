@@ -96,9 +96,7 @@ export default function MapaInstalacion() {
       fd.append('nombre', draft.nombre)
       fd.append('descripcion', draft.descripcion)
       if (draft.imagenFile) fd.append('imagen_satelital', draft.imagenFile)
-      const { data: inst } = await api.post('/instalaciones/', fd, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      })
+      const { data: inst } = await api.post('/instalaciones/', fd)
 
       for (const cp of draftCps) {
         await api.post('/checkpoints/', {
@@ -116,7 +114,11 @@ export default function MapaInstalacion() {
       setInstalaciones((prev) => [...prev, inst])
       seleccionar(inst)
     } catch (err) {
-      alert(err.response?.data?.nombre?.[0] || 'Error al guardar')
+      const d = err.response?.data
+      const msg = d
+        ? (typeof d === 'string' ? d : Object.entries(d).map(([k, v]) => `${k}: ${[v].flat().join(', ')}`).join('\n'))
+        : 'Error al guardar'
+      alert(msg)
     } finally {
       setGuardando(false)
     }
@@ -187,9 +189,7 @@ export default function MapaInstalacion() {
     if (!file || !seleccionada) return
     const fd = new FormData()
     fd.append('imagen_satelital', file)
-    const { data } = await api.patch(`/instalaciones/${seleccionada.id}/`, fd, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    })
+    const { data } = await api.patch(`/instalaciones/${seleccionada.id}/`, fd)
     setSeleccionada(data)
     setInstalaciones((prev) => prev.map((i) => i.id === data.id ? data : i))
   }
@@ -215,8 +215,8 @@ export default function MapaInstalacion() {
 
   return (
     <div className="flex h-full">
-      {/* Sidebar */}
-      <div className="w-64 bg-dark-400 border-r border-white/5 flex flex-col shrink-0">
+      {/* Sidebar — oculto en móvil cuando hay mapa activo */}
+      <div className={`${mostrarMapa ? 'hidden md:flex' : 'flex'} w-full md:w-64 bg-dark-400 border-r border-white/5 flex-col md:shrink-0`}>
         <div className="px-4 py-4 border-b border-white/5 flex items-center justify-between">
           <h2 className="font-semibold text-white text-sm">Instalaciones</h2>
           {!esDraft && (
@@ -245,8 +245,8 @@ export default function MapaInstalacion() {
         </div>
       </div>
 
-      {/* Área principal */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      {/* Área principal — oculta en móvil cuando no hay mapa */}
+      <div className={`${!mostrarMapa ? 'hidden md:flex' : 'flex'} flex-1 flex-col overflow-hidden`}>
         {!mostrarMapa ? (
           <div className="flex-1 flex flex-col items-center justify-center text-white/30 gap-4">
             <p className="text-5xl">🗺</p>
@@ -255,19 +255,28 @@ export default function MapaInstalacion() {
         ) : (
           <>
             {/* Header */}
-            <div className="px-6 py-4 border-b border-white/5 flex items-center justify-between gap-3">
-              <div className="min-w-0">
+            <div className="px-4 md:px-6 py-3 md:py-4 border-b border-white/5 flex items-center justify-between gap-3">
+              <div className="min-w-0 flex items-center gap-3">
+                {/* Botón volver — solo móvil */}
+                <button
+                  onClick={() => esDraft ? cancelarDraft() : setSeleccionada(null)}
+                  className="md:hidden text-accent text-sm shrink-0"
+                >
+                  ← Lista
+                </button>
+                <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <h1 className="font-bold text-white truncate">{nombreActual}</h1>
                   {esDraft && (
                     <span className="text-xs bg-warning/20 text-warning px-2 py-0.5 rounded-full shrink-0">Sin guardar</span>
                   )}
                 </div>
-                <p className="text-white/40 text-sm">
+                <p className="text-white/40 text-xs md:text-sm">
                   {adjustMode
-                    ? 'Modo ajuste — arrastrá para mover la imagen'
-                    : `${checkpointsActuales.length} checkpoint${checkpointsActuales.length !== 1 ? 's' : ''} · hacé click en el mapa para agregar`}
+                    ? 'Arrastrá para mover la imagen'
+                    : `${checkpointsActuales.length} checkpoint${checkpointsActuales.length !== 1 ? 's' : ''} · tocá el mapa para agregar`}
                 </p>
+                </div>
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
@@ -301,7 +310,7 @@ export default function MapaInstalacion() {
             </div>
 
             {/* Mapa */}
-            <div className="flex-1 overflow-hidden p-6">
+            <div className="flex-1 overflow-hidden p-3 md:p-6">
               <MapaCheckpoints
                 imagenUrl={imagenActual}
                 checkpoints={checkpointsActuales}

@@ -105,7 +105,7 @@ export default function MapaCheckpoints({
           src={imagenUrl}
           alt="Mapa"
           style={adjustMode ? { objectPosition: `${imgPos.x}% ${imgPos.y}%` } : {}}
-          className={`absolute inset-0 w-full h-full ${adjustMode ? 'object-cover' : 'object-fill'}`}
+          className={`absolute inset-0 w-full h-full ${adjustMode ? 'object-cover' : 'object-contain'}`}
           draggable={false}
           onMouseDown={handleImgMouseDown}
         />
