@@ -162,6 +162,21 @@ class CheckpointScanSerializer(serializers.ModelSerializer):
         return obj.ejecucion.vigilante.get_full_name() or obj.ejecucion.vigilante.username
 
 
+class CheckpointScanListSerializer(serializers.ModelSerializer):
+    checkpoint_nombre = serializers.CharField(source='checkpoint.nombre', read_only=True)
+    instalacion_nombre = serializers.CharField(source='checkpoint.instalacion.nombre', read_only=True)
+    ronda_nombre = serializers.CharField(source='ejecucion.ronda.nombre', read_only=True)
+    vigilante_nombre = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CheckpointScan
+        fields = ['id', 'checkpoint_nombre', 'instalacion_nombre', 'ronda_nombre',
+                  'vigilante_nombre', 'tipo', 'nota', 'timestamp']
+
+    def get_vigilante_nombre(self, obj):
+        return obj.ejecucion.vigilante.get_full_name() or obj.ejecucion.vigilante.username
+
+
 class ProgramacionRondaSerializer(serializers.ModelSerializer):
     ronda_nombre = serializers.CharField(source='ronda.nombre', read_only=True)
     instalacion_nombre = serializers.CharField(source='ronda.instalacion.nombre', read_only=True)

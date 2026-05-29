@@ -28,7 +28,8 @@ from .serializers import (
     UserSerializer, UserCreateSerializer, InstalacionSerializer,
     InstalacionListSerializer, CheckpointSerializer, RondaSerializer,
     RondaCreateSerializer, EjecucionRondaSerializer, EjecucionRondaListSerializer,
-    CheckpointScanSerializer, ScanOfflineSerializer, ProgramacionRondaSerializer
+    CheckpointScanSerializer, CheckpointScanListSerializer,
+    ScanOfflineSerializer, ProgramacionRondaSerializer
 )
 
 
@@ -744,6 +745,27 @@ def exportar_ejecuciones_excel(request):
     response['Content-Disposition'] = 'attachment; filename=rondines.xlsx'
     wb.save(response)
     return response
+
+
+# ─── Lista de scans individuales ─────────────────────────────────────────────
+
+@api_view(['GET'])
+def scans_list(request):
+    qs = CheckpointScan.objects.select_related(
+        'checkpoint', 'checkpoint__instalacion',
+        'ejecucion', 'ejecucion__vigilante', 'ejecucion__ronda'
+    ).order_by('-timestamp')
+
+    if fecha_desde := request.query_params.get('fecha_desde'):
+        qs = qs.filter(timestamp__date__gte=fecha_desde)
+    if fecha_hasta := request.query_params.get('fecha_hasta'):
+        qs = qs.filter(timestamp__date__lte=fecha_hasta)
+    if tipo := request.query_params.get('tipo'):
+        qs = qs.filter(tipo=tipo)
+    if vigilante := request.query_params.get('vigilante'):
+        qs = qs.filter(ejecucion__vigilante_id=vigilante)
+
+    return Response(CheckpointScanListSerializer(qs[:500], many=True).data)
 
 
 # ─── Versión del APK ─────────────────────────────────────────────────────────
