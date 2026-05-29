@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import api from '../../lib/api'
-import { guardarScanOffline } from '../../lib/db'
+import { guardarScanOffline, getCheckpointCacheado, getEjecucionCacheada } from '../../lib/db'
 
 const TIPOS = [
   {
@@ -62,12 +62,21 @@ export default function ScanCheckpoint() {
         setEjecucionActiva(lista[0] || null)
         setFase('seleccion')
       } catch {
-        setFase('resultado')
-        setResultado({
-          ok: false,
-          titulo: 'QR no reconocido',
-          subtitulo: 'Este checkpoint no existe o fue desactivado.',
-        })
+        // Sin conexión → intentar caché local
+        const cpCacheado = getCheckpointCacheado(uuid)
+        const ejecCacheada = getEjecucionCacheada()
+        if (cpCacheado) {
+          setCheckpoint(cpCacheado)
+          setEjecucionActiva(ejecCacheada)
+          setFase('seleccion')
+        } else {
+          setFase('resultado')
+          setResultado({
+            ok: false,
+            titulo: 'Sin conexión',
+            subtitulo: 'No hay datos en caché. Abrí la ronda una vez con internet para habilitar el modo offline.',
+          })
+        }
       }
     }
     init()
@@ -216,7 +225,13 @@ export default function ScanCheckpoint() {
 
         <div className="w-full space-y-3">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => {
+              if (ejecucionActiva?.id) {
+                navigate(`/ejecucion/${ejecucionActiva.id}`, { replace: true })
+              } else {
+                navigate('/rondas', { replace: true })
+              }
+            }}
             className="w-full py-4 rounded-2xl font-semibold bg-dark-100 border border-white/10 text-white/70 active:scale-95 transition-transform"
           >
             ← Volver a la ronda
