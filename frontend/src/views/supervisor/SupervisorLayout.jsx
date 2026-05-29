@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { logout, getUser } from '../../lib/auth'
+import { useAppUpdate } from '../../hooks/useAppUpdate'
 
 const NAV = [
   { to: '/supervisor', label: 'Dashboard', end: true, icon: '▦' },
@@ -16,6 +17,8 @@ export default function SupervisorLayout() {
   const user = getUser()
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [drawerOpen, setDrawerOpen] = useState(false)
+
+  const update = useAppUpdate()
 
   const handleLogout = () => { logout(); navigate('/login') }
   const closeDrawer = () => setDrawerOpen(false)
@@ -144,6 +147,22 @@ export default function SupervisorLayout() {
           </div>
           <span className="font-bold text-white text-sm">Rondines</span>
         </header>
+
+        {update && (
+          <div className="shrink-0 bg-accent/10 border-b border-accent/30 px-4 py-2 flex items-center justify-between gap-3">
+            <p className="text-accent text-sm font-medium">
+              Nueva versión disponible — v{update.version}
+            </p>
+            <a
+              href={update.download_url}
+              target="_blank"
+              rel="noreferrer"
+              className="shrink-0 bg-accent text-dark-500 font-bold text-xs px-3 py-1.5 rounded-lg active:scale-95 transition-transform"
+            >
+              Actualizar
+            </a>
+          </div>
+        )}
 
         <main className="flex-1 overflow-auto min-h-0">
           <Outlet />
